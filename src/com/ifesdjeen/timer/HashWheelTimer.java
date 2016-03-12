@@ -22,13 +22,12 @@ package com.ifesdjeen.timer;
 
 import com.lmax.disruptor.EventFactory;
 import com.lmax.disruptor.RingBuffer;
-import com.lmax.disruptor.util.DaemonThreadFactory;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Hash Wheel Timer, as per the paper:
@@ -44,15 +43,15 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Oleksandr Petrov
  */
-public class HashWheelTimer { // implements ScheduledExecutorService
+public class HashWheelTimer implements ScheduledExecutorService {
 
   public static final  int    DEFAULT_WHEEL_SIZE = 512;
   private static final String DEFAULT_TIMER_NAME = "hash-wheel-timer";
 
   private final RingBuffer<Set<TimerRegistration>> wheel;
   private final int                                resolution;
-  private final Thread                             loop;
-  private final Executor                           executor;
+  private final ExecutorService                    loop;
+  private final ExecutorService                    executor;
   private final WaitStrategy                       waitStrategy;
 
   /**
@@ -97,7 +96,7 @@ public class HashWheelTimer { // implements ScheduledExecutorService
    * @param strategy  strategy for waiting for the next tick
    * @param exec      Executor instance to submit tasks to
    */
-  public HashWheelTimer(String name, int res, int wheelSize, WaitStrategy strategy, Executor exec) {
+  public HashWheelTimer(String name, int res, int wheelSize, WaitStrategy strategy, ExecutorService exec) {
     this.waitStrategy = strategy;
 
     this.wheel = RingBuffer.createSingleProducer(new EventFactory<Set<TimerRegistration>>() {
@@ -108,7 +107,7 @@ public class HashWheelTimer { // implements ScheduledExecutorService
     }, wheelSize);
 
     this.resolution = res;
-    this.loop = DaemonThreadFactory.INSTANCE.newThread(new Runnable() {
+    final Runnable loopRunnable = new Runnable() {
       @Override
       public void run() {
         long deadline = System.currentTimeMillis();
@@ -142,30 +141,34 @@ public class HashWheelTimer { // implements ScheduledExecutorService
           wheel.publish(wheel.next());
         }
       }
+    };
+    this.loop = Executors.newSingleThreadExecutor(new ThreadFactory() {
+      AtomicInteger i = new AtomicInteger();
+      @Override
+      public Thread newThread(Runnable r) {
+        Thread thread = new Thread(r, name + "-" + i.getAndIncrement());
+        thread.setDaemon(true);
+        return thread;
+      }
     });
-
     this.executor = exec;
-    this.start();
+    this.loop.submit(loopRunnable);
   }
 
   public TimerRegistration schedule(Runnable runnable,
                                     long period,
                                     TimeUnit timeUnit,
                                     long delayInMilliseconds) {
-    isTrue(!loop.isInterrupted(), "Cannot submit tasks to this timer as it has been cancelled.");
+    isTrue(!loop.isTerminated(), "Cannot submit tasks to this timer as it has been cancelled.");
     return schedule(TimeUnit.MILLISECONDS.convert(period, timeUnit), delayInMilliseconds, runnable);
   }
 
   public TimerRegistration submit(Runnable runnable,
                                   long period,
                                   TimeUnit timeUnit) {
-    isTrue(!loop.isInterrupted(), "Cannot submit tasks to this timer as it has been cancelled.");
+    isTrue(!loop.isTerminated(), "Cannot submit tasks to this timer as it has been cancelled.");
     long ms = TimeUnit.MILLISECONDS.convert(period, timeUnit);
-    return schedule(ms, ms, runnable).cancelAfterUse();
-  }
-
-  public TimerRegistration submit(Runnable consumer) {
-    return submit(consumer, resolution, TimeUnit.MILLISECONDS);
+    return schedule(ms, ms, runnable, true);
   }
 
   public TimerRegistration schedule(Runnable runnable,
@@ -175,15 +178,43 @@ public class HashWheelTimer { // implements ScheduledExecutorService
     return schedule(TimeUnit.MILLISECONDS.convert(period, timeUnit), delay, runnable);
   }
 
-  public TimerRegistration schedule(Runnable runnable,
-                                    long period,
-                                    TimeUnit timeUnit) {
-    return schedule(TimeUnit.MILLISECONDS.convert(period, timeUnit), 0, runnable);
+  @Override
+  public ScheduledFuture<?> submit(Runnable Runnable) {
+    return submit(Runnable, resolution, TimeUnit.MILLISECONDS).wrap();
+  }
+
+  @Override
+  public ScheduledFuture<?> schedule(Runnable runnable,
+                                     long period,
+                                     TimeUnit timeUnit) {
+    return schedule(TimeUnit.MILLISECONDS.convert(period, timeUnit), 0, runnable).wrap();
+  }
+
+  @Override
+  public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+    return null; // TODO
+  }
+
+  @Override
+  public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+    return null; // TODO
+  }
+
+  @Override
+  public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+    return null; // TODO
   }
 
   private TimerRegistration schedule(long recurringTimeout,
                                      long firstDelay,
                                      Runnable runnable) {
+    return schedule(recurringTimeout, firstDelay, runnable, false);
+  }
+
+  private TimerRegistration schedule(long recurringTimeout,
+                                     long firstDelay,
+                                     Runnable runnable,
+                                     boolean cancelAfterUse) {
     isTrue(recurringTimeout >= resolution,
            "Cannot schedule tasks for amount of time less than timer precision.");
 
@@ -193,7 +224,7 @@ public class HashWheelTimer { // implements ScheduledExecutorService
     long firstFireOffset = firstDelay / resolution;
     long firstFireRounds = firstFireOffset / wheel.getBufferSize();
 
-    TimerRegistration r = new TimerRegistration(firstFireRounds, offset, rounds, runnable);
+    TimerRegistration r = new TimerRegistration(firstFireRounds, offset, rounds, runnable, cancelAfterUse);
     wheel.get(wheel.getCursor() + firstFireOffset + 1).add(r);
     return r;
   }
@@ -207,22 +238,6 @@ public class HashWheelTimer { // implements ScheduledExecutorService
     registration.reset();
     wheel.get(wheel.getCursor() + registration.getOffset()).add(registration);
   }
-
-  /**
-   * Start the Timer
-   */
-  public void start() {
-    this.loop.start();
-    wheel.publish(0);
-  }
-
-  /**
-   * Cancel current Timer
-   */
-  public void cancel() {
-    this.loop.interrupt();
-  }
-
 
   @Override
   public String toString() {
@@ -247,5 +262,64 @@ public class HashWheelTimer { // implements ScheduledExecutorService
     }
   }
 
+  @Override
+  public void shutdown() {
+    this.loop.shutdown();
+    this.executor.shutdown();
+  }
+
+  @Override
+  public List<Runnable> shutdownNow() {
+    this.loop.shutdownNow();
+    return this.executor.shutdownNow();
+  }
+
+  @Override
+  public boolean isShutdown() {
+    return this.loop.isShutdown() && this.executor.isShutdown();
+  }
+
+  @Override
+  public boolean isTerminated() {
+    return this.loop.isTerminated() && this.executor.isTerminated();
+  }
+
+  @Override
+  public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+
+    return this.loop.awaitTermination(timeout, unit) && this.executor.awaitTermination(timeout, unit);
+  }
+
+  @Override
+  public <T> Future<T> submit(Callable<T> task) {
+    return this.executor.submit(task);
+  }
+
+  @Override
+  public <T> Future<T> submit(Runnable task, T result) {
+    return this.executor.submit(task, result);
+  }
+
+  @Override
+  public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks) throws InterruptedException {
+    return this.executor.invokeAll(tasks);
+  }
+
+  @Override
+  public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout,
+                                       TimeUnit unit) throws InterruptedException {
+    return this.executor.invokeAll(tasks, timeout, unit);
+  }
+
+  @Override
+  public <T> T invokeAny(Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
+    return this.executor.invokeAny(tasks);
+  }
+
+  @Override
+  public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout,
+                         TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+    return this.executor.invokeAny(tasks, timeout, unit);
+  }
 }
 
