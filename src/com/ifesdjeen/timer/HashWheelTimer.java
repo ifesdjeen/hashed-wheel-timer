@@ -29,10 +29,6 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
 
 /**
  * Hash Wheel Timer, as per the paper:
@@ -48,7 +44,7 @@ import java.util.function.Consumer;
  *
  * @author Oleksandr Petrov
  */
-public class HashWheelTimer {
+public class HashWheelTimer { // implements ScheduledExecutorService
 
   public static final  int    DEFAULT_WHEEL_SIZE = 512;
   private static final String DEFAULT_TIMER_NAME = "hash-wheel-timer";
@@ -130,8 +126,6 @@ public class HashWheelTimer {
               if (!r.isCancelAfterUse()) {
                 reschedule(r);
               }
-            } else if (r.isPaused()) {
-              reschedule(r);
             } else {
               r.decrement();
             }
@@ -154,34 +148,42 @@ public class HashWheelTimer {
     this.start();
   }
 
-  public TimerRegistration<? extends Consumer<Long>> schedule(Consumer<Long> consumer,
-                                                              long period,
-                                                              TimeUnit timeUnit,
-                                                              long delayInMilliseconds) {
+  public TimerRegistration schedule(Runnable runnable,
+                                    long period,
+                                    TimeUnit timeUnit,
+                                    long delayInMilliseconds) {
     isTrue(!loop.isInterrupted(), "Cannot submit tasks to this timer as it has been cancelled.");
-    return schedule(TimeUnit.MILLISECONDS.convert(period, timeUnit), delayInMilliseconds, consumer);
+    return schedule(TimeUnit.MILLISECONDS.convert(period, timeUnit), delayInMilliseconds, runnable);
   }
 
-  public TimerRegistration<? extends Consumer<Long>> submit(Consumer<Long> consumer,
-                                                            long period,
-                                                            TimeUnit timeUnit) {
+  public TimerRegistration submit(Runnable runnable,
+                                  long period,
+                                  TimeUnit timeUnit) {
     isTrue(!loop.isInterrupted(), "Cannot submit tasks to this timer as it has been cancelled.");
     long ms = TimeUnit.MILLISECONDS.convert(period, timeUnit);
-    return schedule(ms, ms, consumer).cancelAfterUse();
+    return schedule(ms, ms, runnable).cancelAfterUse();
   }
 
-  public TimerRegistration<? extends Consumer<Long>> submit(Consumer<Long> consumer) {
+  public TimerRegistration submit(Runnable consumer) {
     return submit(consumer, resolution, TimeUnit.MILLISECONDS);
   }
 
-  public TimerRegistration<? extends Consumer<Long>> schedule(Consumer<Long> consumer,
-                                                              long period,
-                                                              TimeUnit timeUnit) {
-    return schedule(TimeUnit.MILLISECONDS.convert(period, timeUnit), 0, consumer);
+  public TimerRegistration schedule(Runnable runnable,
+                                    long period,
+                                    long delay,
+                                    TimeUnit timeUnit) {
+    return schedule(TimeUnit.MILLISECONDS.convert(period, timeUnit), delay, runnable);
   }
 
-  private TimerRegistration<? extends Consumer<Long>> schedule(long recurringTimeout, long firstDelay,
-                                                               Consumer<Long> consumer) {
+  public TimerRegistration schedule(Runnable runnable,
+                                    long period,
+                                    TimeUnit timeUnit) {
+    return schedule(TimeUnit.MILLISECONDS.convert(period, timeUnit), 0, runnable);
+  }
+
+  private TimerRegistration schedule(long recurringTimeout,
+                                     long firstDelay,
+                                     Runnable runnable) {
     isTrue(recurringTimeout >= resolution,
            "Cannot schedule tasks for amount of time less than timer precision.");
 
@@ -191,7 +193,7 @@ public class HashWheelTimer {
     long firstFireOffset = firstDelay / resolution;
     long firstFireRounds = firstFireOffset / wheel.getBufferSize();
 
-    TimerRegistration r = new TimerRegistration(firstFireRounds, offset, consumer, rounds);
+    TimerRegistration r = new TimerRegistration(firstFireRounds, offset, rounds, runnable);
     wheel.get(wheel.getCursor() + firstFireOffset + 1).add(r);
     return r;
   }
@@ -221,170 +223,6 @@ public class HashWheelTimer {
     this.loop.interrupt();
   }
 
-
-  /**
-   * Timer Registration
-   *
-   * @param <T> type of the Timer Registration Consumer
-   */
-  public static class TimerRegistration<T extends Consumer<Long>> implements Runnable, Comparable, Pausable,
-                                                                             Registration {
-
-    public static int STATUS_PAUSED    = 1;
-    public static int STATUS_CANCELLED = -1;
-    public static int STATUS_READY     = 0;
-
-    private final T             delegate;
-    private final long          rescheduleRounds;
-    private final long          scheduleOffset;
-    private final AtomicLong    rounds;
-    private final AtomicInteger status;
-    private final AtomicBoolean cancelAfterUse;
-
-    /**
-     * Creates a new Timer Registration with given {@data rounds}, {@data offset} and {@data delegate}.
-     *
-     * @param rounds   amount of rounds the Registration should go through until it's elapsed
-     * @param offset   offset of in the Ring Buffer for rescheduling
-     * @param delegate delegate that will be ran whenever the timer is elapsed
-     */
-    public TimerRegistration(long rounds, long offset, T delegate, long rescheduleRounds) {
-      this.rescheduleRounds = rescheduleRounds;
-      this.scheduleOffset = offset;
-      this.delegate = delegate;
-      this.rounds = new AtomicLong(rounds);
-      this.status = new AtomicInteger(STATUS_READY);
-      this.cancelAfterUse = new AtomicBoolean(false);
-    }
-
-    /**
-     * Decrement an amount of runs Registration has to run until it's elapsed
-     */
-    public void decrement() {
-      rounds.decrementAndGet();
-    }
-
-    /**
-     * Check whether the current Registration is ready for execution
-     *
-     * @return whether or not the current Registration is ready for execution
-     */
-    public boolean ready() {
-      return status.get() == STATUS_READY && rounds.get() == 0;
-    }
-
-    /**
-     * Run the delegate of the current Registration
-     */
-    @Override
-    public void run() {
-      delegate.accept(System.currentTimeMillis());
-    }
-
-    /**
-     * Reset the Registration
-     */
-    public void reset() {
-      this.status.set(STATUS_READY);
-      this.rounds.set(rescheduleRounds);
-    }
-
-    /**
-     * Cancel the registration
-     *
-     * @return current Registration
-     */
-    public Registration cancel() {
-      this.status.set(STATUS_CANCELLED);
-      return this;
-    }
-
-    /**
-     * Check whether the current Registration is cancelled
-     *
-     * @return whether or not the current Registration is cancelled
-     */
-    @Override
-    public boolean isCancelled() {
-      return status.get() == STATUS_CANCELLED;
-    }
-
-    /**
-     * Pause the current Regisration
-     *
-     * @return current Registration
-     */
-    @Override
-    public Registration pause() {
-      this.status.set(STATUS_PAUSED);
-      return this;
-    }
-
-    /**
-     * Check whether the current Registration is paused
-     *
-     * @return whether or not the current Registration is paused
-     */
-    @Override
-    public boolean isPaused() {
-      return this.status.get() == STATUS_PAUSED;
-    }
-
-    /**
-     * Resume current Registration
-     *
-     * @return current Registration
-     */
-    @Override
-    public Registration resume() {
-      this.status.set(STATUS_READY);
-      return this;
-    }
-
-    /**
-     * Get the offset of the Registration relative to the current Ring Buffer position
-     * to make it fire timely.
-     *
-     * @return the offset of current Registration
-     */
-    private long getOffset() {
-      return this.scheduleOffset;
-    }
-
-    @Override
-    public Object getObject() {
-      return null;
-    }
-
-    /**
-     *
-     * @return {@literal this}
-     */
-    public TimerRegistration<T> cancelAfterUse() {
-      cancelAfterUse.set(false);
-      return this;
-    }
-
-    @Override
-    public boolean isCancelAfterUse() {
-      return this.cancelAfterUse.get();
-    }
-
-    @Override
-    public int compareTo(Object o) {
-      TimerRegistration other = (TimerRegistration) o;
-      if (rounds.get() == other.rounds.get()) {
-        return other == this ? 0 : -1;
-      } else {
-        return Long.compare(rounds.get(), other.rounds.get());
-      }
-    }
-
-    @Override
-    public String toString() {
-      return String.format("HashWheelTimer { Rounds left: %d, Status: %d }", rounds.get(), status.get());
-    }
-  }
 
   @Override
   public String toString() {
@@ -469,5 +307,16 @@ public class HashWheelTimer {
       throw new IllegalArgumentException(message);
     }
   }
+
+  /**
+   * Executor Delegates
+   */
+
+  //@Override
+  public void execute(Runnable command) {
+    executor.execute(command);
+  }
+
+
 }
 
