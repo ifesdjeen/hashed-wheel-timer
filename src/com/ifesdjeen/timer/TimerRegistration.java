@@ -1,9 +1,6 @@
 package com.ifesdjeen.timer;
 
-import java.util.concurrent.Delayed;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 
 /**
  * Timer Registration
@@ -15,12 +12,14 @@ public class TimerRegistration implements Runnable, Comparable {
   public static int STATUS_CANCELLED = -1;
   public static int STATUS_READY     = 0;
 
-  private final long     rescheduleRounds;
-  private final long     scheduleOffset;
-  private       long     rounds;
-  private       int      status;
-  private final boolean  cancelAfterUse;
-  private final Runnable runnable;
+  // TODO: pad status to avoid cache hits? rounds are accessed from just one thread anyways
+  private          long     rounds;
+  private volatile int      status;
+
+  private final    long     rescheduleRounds;
+  private final    long     scheduleOffset;
+  private final    boolean  cancelAfterUse;
+  private final    Runnable runnable;
 
   /**
    * Creates a new Timer Registration with given {@data rounds}, {@data offset} and {@data delegate}.
@@ -28,12 +27,12 @@ public class TimerRegistration implements Runnable, Comparable {
    * @param rounds amount of rounds the Registration should go through until it's elapsed
    * @param offset offset of in the Ring Buffer for rescheduling
    */
-  public TimerRegistration(long rounds, long offset, long rescheduleRounds, Runnable runnable) {
+  public TimerRegistration(long rounds, long offset, long rescheduleRounds, Runnable runnable, boolean cancelAfterUse) {
     this.rescheduleRounds = rescheduleRounds;
     this.scheduleOffset = offset;
     this.rounds = rounds;
     this.status = STATUS_READY;
-    this.cancelAfterUse = false;
+    this.cancelAfterUse = cancelAfterUse;
     this.runnable = runnable;
   }
 
@@ -89,14 +88,6 @@ public class TimerRegistration implements Runnable, Comparable {
     return this.scheduleOffset;
   }
 
-  /**
-   * @return {@literal this}
-   */
-  public TimerRegistration cancelAfterUse() {
-    // cancelAfterUse = false; TODO ?!?
-    return this;
-  }
-
   public boolean isCancelAfterUse() {
     return this.cancelAfterUse;
   }
@@ -124,4 +115,43 @@ public class TimerRegistration implements Runnable, Comparable {
     runnable.run();
   }
 
+  public ScheduledFuture<?> wrap() {
+    TimerRegistration capture = this;
+    return new ScheduledFuture<Object>() {
+      @Override
+      public long getDelay(TimeUnit unit) {
+        return 0; // TODO
+      }
+
+      @Override
+      public int compareTo(Delayed o) {
+        return 0; // TODO
+      }
+
+      @Override
+      public boolean cancel(boolean mayInterruptIfRunning) {
+        return capture.cancel(mayInterruptIfRunning);
+      }
+
+      @Override
+      public boolean isCancelled() {
+        return capture.isCancelled();
+      }
+
+      @Override
+      public boolean isDone() {
+        return capture.isDone();
+      }
+
+      @Override
+      public Object get() throws InterruptedException, ExecutionException {
+        return null;
+      }
+
+      @Override
+      public Object get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+        return null; // ?? or does it block/wait in this case it makes sense to use the settable future everywhere
+      }
+    };
+  }
 }
