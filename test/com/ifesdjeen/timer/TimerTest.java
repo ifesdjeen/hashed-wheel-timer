@@ -15,7 +15,7 @@ public class TimerTest {
   @Test
   public void timerTest() throws InterruptedException {
     int period = 50;
-    final HashWheelTimer timer = new HashWheelTimer(10, 8, new HashWheelTimer.SleepWait());
+    final HashWheelTimer timer = new HashWheelTimer(10, 8, new WaitStrategy.SleepWait());
     final CountDownLatch latch = new CountDownLatch(10);
 
     timer.schedule(() -> {
@@ -51,7 +51,7 @@ public class TimerTest {
     final HashWheelTimer timer = new HashWheelTimer("timer",
                                                     10,
                                                     32768,
-                                                    new HashWheelTimer.BusySpinWait(),
+                                                    new WaitStrategy.BusySpinWait(),
                                                     Executors.newFixedThreadPool(16));
 
     final CountDownLatch latch = new CountDownLatch(submittedTasks);
