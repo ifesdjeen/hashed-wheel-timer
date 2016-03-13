@@ -82,6 +82,7 @@ public class TimerTest {
         max = diff;
       }
     }
+
     //
     System.out.println(
       "Hash Wheel: Elapsed:" + (end - start) + ", Max Deviation: " + max + ", Mean Deviation: " + (sum / arr.length));
@@ -89,7 +90,7 @@ public class TimerTest {
 
   @Test
   public void jdkTimerTest() throws InterruptedException {
-    ScheduledExecutorService timer = Executors.newScheduledThreadPool(16);
+    ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
 
     int submittedTasks = 1000000;
     int delay = 1000;
