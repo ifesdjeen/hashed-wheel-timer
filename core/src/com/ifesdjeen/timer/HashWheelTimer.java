@@ -183,19 +183,19 @@ public class HashWheelTimer implements ScheduledExecutorService {
 
   @Override
   public ScheduledFuture<?> submit(Runnable runnable) {
-    return scheduleOneShot(resolution, runnable);
+    return scheduleOneShot(resolution, constantlyNull(runnable));
   }
 
   @Override
   public ScheduledFuture<?> schedule(Runnable runnable,
                                      long period,
                                      TimeUnit timeUnit) {
-    return scheduleOneShot(TimeUnit.MILLISECONDS.convert(period, timeUnit), runnable);
+    return scheduleOneShot(TimeUnit.MILLISECONDS.convert(period, timeUnit), constantlyNull(runnable));
   }
 
   @Override
-  public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-    throw new NotImplementedException();
+  public <V> ScheduledFuture<V> schedule(Callable<V> callable, long period, TimeUnit timeUnit) {
+    return scheduleOneShot(TimeUnit.MILLISECONDS.convert(period, timeUnit), callable);
   }
 
   @Override
@@ -208,18 +208,19 @@ public class HashWheelTimer implements ScheduledExecutorService {
     throw new NotImplementedException();
   }
 
-  private Registration<?> scheduleOneShot(long firstDelay,
-                                          Runnable runnable) {
+  private <V> Registration<V> scheduleOneShot(long firstDelay,
+                                              Callable<V> callable) {
     isTrue(firstDelay >= resolution,
            "Cannot schedule tasks for amount of time less than timer precision.");
     // TODO: check if switching to int gives anything
     long firstFireOffset = firstDelay / resolution;
     long firstFireRounds = firstFireOffset / wheel.getBufferSize();
 
-    Registration<?> r = new OneShotRegistration.RunnableOneShotRegistration(firstFireRounds, runnable);
+    Registration<V> r = new OneShotRegistration<V>(firstFireRounds, callable);
     wheel.get(wheel.getCursor() + firstFireOffset + 1).add(r);
     return r;
   }
+
   //  private Registration<?> schedule(long recurringTimeout,
   //                                     long firstDelay,
   //                                     Runnable runnable) {
@@ -335,6 +336,13 @@ public class HashWheelTimer implements ScheduledExecutorService {
   public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout,
                          TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
     return this.executor.invokeAny(tasks, timeout, unit);
+  }
+
+  private static Callable<?> constantlyNull(Runnable r) {
+    return () -> {
+      r.run();
+      return null;
+    };
   }
 }
 

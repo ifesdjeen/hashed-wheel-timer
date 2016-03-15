@@ -6,14 +6,16 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-public abstract class OneShotRegistration<T> extends CompletableFuture<T> implements Registration<T> {
+public class OneShotRegistration<T> extends CompletableFuture<T> implements Registration<T> {
 
-  private volatile long rounds;
-  private volatile Status status;
+  private final    Callable<T> callable;
+  private volatile long        rounds;
+  private volatile Status      status;
 
-  public OneShotRegistration(long rounds) {
+  public OneShotRegistration(long rounds, Callable<T> callable) {
     this.rounds = rounds;
     this.status = Status.READY;
+    this.callable = callable;
   }
 
   @Override
@@ -62,37 +64,13 @@ public abstract class OneShotRegistration<T> extends CompletableFuture<T> implem
     return rounds;
   }
 
-  public static class CallableOneShotRegistration<T> extends OneShotRegistration<T> {
-
-    private final Callable<T> callable;
-
-    public CallableOneShotRegistration(long rounds, Callable<T> callable) {
-      super(rounds);
-      this.callable = callable;
-    }
-
-    @Override
-    public void run() {
-      try {
-        this.complete(callable.call());
-      } catch (Exception e) {
-        this.completeExceptionally(e);
-      }
+  @Override
+  public void run() {
+    try {
+      this.complete(callable.call());
+    } catch (Exception e) {
+      this.completeExceptionally(e);
     }
   }
 
-  public static class RunnableOneShotRegistration extends OneShotRegistration<Object> {
-
-    private final Runnable delegate;
-
-    public RunnableOneShotRegistration(long rounds, Runnable runnable) {
-      super(rounds);
-      this.delegate = runnable;
-    }
-
-    @Override
-    public void run() {
-      this.delegate.run();
-    }
-  }
 }
