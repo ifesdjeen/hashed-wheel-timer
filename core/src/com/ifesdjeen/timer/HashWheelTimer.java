@@ -22,6 +22,7 @@ package com.ifesdjeen.timer;
 
 import com.lmax.disruptor.EventFactory;
 import com.lmax.disruptor.RingBuffer;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.util.Collection;
 import java.util.List;
@@ -44,15 +45,15 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Oleksandr Petrov
  */
 public class HashWheelTimer implements ScheduledExecutorService {
+  private static final boolean CANCEL_AFTER_USE   = true;
+  public static final  int     DEFAULT_WHEEL_SIZE = 512;
+  private static final String  DEFAULT_TIMER_NAME = "hash-wheel-timer";
 
-  public static final  int    DEFAULT_WHEEL_SIZE = 512;
-  private static final String DEFAULT_TIMER_NAME = "hash-wheel-timer";
-
-  private final RingBuffer<Set<TimerRegistration>> wheel;
-  private final int                                resolution;
-  private final ExecutorService                    loop;
-  private final ExecutorService                    executor;
-  private final WaitStrategy                       waitStrategy;
+  private final RingBuffer<Set<Registration<?>>> wheel;
+  private final int                              resolution;
+  private final ExecutorService                  loop;
+  private final ExecutorService                  executor;
+  private final WaitStrategy                     waitStrategy;
 
   /**
    * Create a new {@code HashWheelTimer} using the given with default resolution of 100 milliseconds and
@@ -99,10 +100,10 @@ public class HashWheelTimer implements ScheduledExecutorService {
   public HashWheelTimer(String name, int res, int wheelSize, WaitStrategy strategy, ExecutorService exec) {
     this.waitStrategy = strategy;
 
-    this.wheel = RingBuffer.createSingleProducer(new EventFactory<Set<TimerRegistration>>() {
+    this.wheel = RingBuffer.createSingleProducer(new EventFactory<Set<Registration<?>>>() {
       @Override
-      public Set<TimerRegistration> newInstance() {
-        return new ConcurrentSkipListSet<TimerRegistration>();
+      public Set<Registration<?>> newInstance() {
+        return new ConcurrentSkipListSet<Registration<?>>();
       }
     }, wheelSize);
 
@@ -113,9 +114,9 @@ public class HashWheelTimer implements ScheduledExecutorService {
         long deadline = System.currentTimeMillis();
 
         while (true) {
-          Set<TimerRegistration> registrations = wheel.get(wheel.getCursor());
+          Set<Registration<?>> registrations = wheel.get(wheel.getCursor());
 
-          for (TimerRegistration r : registrations) {
+          for (Registration r : registrations) {
             if (r.isCancelled()) {
               registrations.remove(r);
             } else if (r.ready()) {
@@ -142,8 +143,10 @@ public class HashWheelTimer implements ScheduledExecutorService {
         }
       }
     };
+
     this.loop = Executors.newSingleThreadExecutor(new ThreadFactory() {
       AtomicInteger i = new AtomicInteger();
+
       @Override
       public Thread newThread(Runnable r) {
         Thread thread = new Thread(r, name + "-" + i.getAndIncrement());
@@ -151,90 +154,103 @@ public class HashWheelTimer implements ScheduledExecutorService {
         return thread;
       }
     });
-    this.executor = exec;
     this.loop.submit(loopRunnable);
+    this.executor = exec;
   }
 
-  public TimerRegistration schedule(Runnable runnable,
-                                    long period,
-                                    TimeUnit timeUnit,
-                                    long delayInMilliseconds) {
-    isTrue(!loop.isTerminated(), "Cannot submit tasks to this timer as it has been cancelled.");
-    return schedule(TimeUnit.MILLISECONDS.convert(period, timeUnit), delayInMilliseconds, runnable);
-  }
+  //  public TimerRegistration schedule(Runnable runnable,
+  //                                    long period,
+  //                                    TimeUnit timeUnit,
+  //                                    long delayInMilliseconds) {
+  //    isTrue(!loop.isTerminated(), "Cannot submit tasks to this timer as it has been cancelled.");
+  //    return schedule(TimeUnit.MILLISECONDS.convert(period, timeUnit), delayInMilliseconds, runnable);
+  //  }
+  //
+  //  private TimerRegistration submit(Runnable runnable,
+  //                                  long period,
+  //                                  TimeUnit timeUnit) {
+  //    isTrue(!loop.isTerminated(), "Cannot submit tasks to this timer as it has been cancelled.");
+  //    long ms = TimeUnit.MILLISECONDS.convert(period, timeUnit);
+  //    return schedule(ms, ms, runnable, true);
+  //  }
 
-  public TimerRegistration submit(Runnable runnable,
-                                  long period,
-                                  TimeUnit timeUnit) {
-    isTrue(!loop.isTerminated(), "Cannot submit tasks to this timer as it has been cancelled.");
-    long ms = TimeUnit.MILLISECONDS.convert(period, timeUnit);
-    return schedule(ms, ms, runnable, true);
-  }
-
-  public TimerRegistration schedule(Runnable runnable,
-                                    long period,
-                                    long delay,
-                                    TimeUnit timeUnit) {
-    return schedule(TimeUnit.MILLISECONDS.convert(period, timeUnit), delay, runnable);
-  }
+  //  public TimerRegistration schedule(Runnable runnable,
+  //                                    long period,
+  //                                    long delay,
+  //                                    TimeUnit timeUnit) {
+  //    return schedule(TimeUnit.MILLISECONDS.convert(period, timeUnit), delay, runnable);
+  //  }
 
   @Override
-  public ScheduledFuture<?> submit(Runnable Runnable) {
-    return submit(Runnable, resolution, TimeUnit.MILLISECONDS).wrap();
+  public ScheduledFuture<?> submit(Runnable runnable) {
+    return scheduleOneShot(resolution, runnable);
   }
 
   @Override
   public ScheduledFuture<?> schedule(Runnable runnable,
                                      long period,
                                      TimeUnit timeUnit) {
-    return schedule(TimeUnit.MILLISECONDS.convert(period, timeUnit), 0, runnable).wrap();
+    return scheduleOneShot(TimeUnit.MILLISECONDS.convert(period, timeUnit), runnable);
   }
 
   @Override
   public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-    return null; // TODO
+    throw new NotImplementedException();
   }
 
   @Override
   public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-    return null; // TODO
+    throw new NotImplementedException();
   }
 
   @Override
   public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
-    return null; // TODO
+    throw new NotImplementedException();
   }
 
-  private TimerRegistration schedule(long recurringTimeout,
-                                     long firstDelay,
-                                     Runnable runnable) {
-    return schedule(recurringTimeout, firstDelay, runnable, false);
-  }
-
-  private TimerRegistration schedule(long recurringTimeout,
-                                     long firstDelay,
-                                     Runnable runnable,
-                                     boolean cancelAfterUse) {
-    isTrue(recurringTimeout >= resolution,
+  private Registration<?> scheduleOneShot(long firstDelay,
+                                          Runnable runnable) {
+    isTrue(firstDelay >= resolution,
            "Cannot schedule tasks for amount of time less than timer precision.");
+    // TODO: guard overflows or switch back to longs
 
-    long offset = recurringTimeout / resolution;
-    long rounds = offset / wheel.getBufferSize();
+    int firstFireOffset = (int) firstDelay / resolution;
+    int firstFireRounds = firstFireOffset / wheel.getBufferSize();
 
-    long firstFireOffset = firstDelay / resolution;
-    long firstFireRounds = firstFireOffset / wheel.getBufferSize();
-
-    TimerRegistration r = new TimerRegistration(firstFireRounds, offset, rounds, runnable, cancelAfterUse);
+    Registration<?> r = new OneShotRegistration.RunnableOneShotRegistration(firstFireRounds, runnable);
     wheel.get(wheel.getCursor() + firstFireOffset + 1).add(r);
     return r;
   }
+  //  private Registration<?> schedule(long recurringTimeout,
+  //                                     long firstDelay,
+  //                                     Runnable runnable) {
+  //    return schedule(recurringTimeout, firstDelay, runnable, false);
+  //  }
+
+  //  private TimerRegistration schedule(long recurringTimeout,
+  //                                     long firstDelay,
+  //                                     Runnable runnable,
+  //                                     boolean cancelAfterUse) {
+  //    isTrue(recurringTimeout >= resolution,
+  //           "Cannot schedule tasks for amount of time less than timer precision.");
+  //
+  //    long offset = recurringTimeout / resolution;
+  //    long rounds = offset / wheel.getBufferSize();
+  //
+  //    long firstFireOffset = firstDelay / resolution;
+  //    long firstFireRounds = firstFireOffset / wheel.getBufferSize();
+  //
+  //    TimerRegistration r = new TimerRegistration(firstFireRounds, offset, rounds, runnable, cancelAfterUse);
+  //    wheel.get(wheel.getCursor() + firstFireOffset + 1).add(r);
+  //    return r;
+  //  }
 
   /**
    * Rechedule a {@link TimerRegistration}  for the next fire
    *
    * @param registration
    */
-  private void reschedule(TimerRegistration registration) {
+  private void reschedule(Registration<?> registration) {
     registration.reset();
     wheel.get(wheel.getCursor() + registration.getOffset()).add(registration);
   }
@@ -250,7 +266,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
    * Executor Delegates
    */
 
-  //@Override
+  @Override
   public void execute(Runnable command) {
     executor.execute(command);
   }
