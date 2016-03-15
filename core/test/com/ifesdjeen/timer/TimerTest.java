@@ -1,9 +1,12 @@
 package com.ifesdjeen.timer;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
@@ -11,21 +14,34 @@ import static org.junit.Assert.assertTrue;
 
 public class TimerTest {
 
+  HashWheelTimer timer;
+
+  @Before
+  public void before() {
+    timer = new HashWheelTimer(10, 8, new WaitStrategy.SleepWait());
+  }
+
+  @After
+  public void after() throws InterruptedException {
+    timer.shutdownNow();
+    assertTrue(timer.awaitTermination(10, TimeUnit.SECONDS));
+  }
 
   @Test
-  public void timerTest() throws InterruptedException {
-    int period = 50;
-     final HashWheelTimer timer = new HashWheelTimer(10, 8, new WaitStrategy.SleepWait());
-    final CountDownLatch latch = new CountDownLatch(10);
-
+  public void scheduleOneShotTest() throws InterruptedException {
+    AtomicInteger i = new AtomicInteger(1);
     timer.schedule(() -> {
-                     latch.countDown();
-                   }, period,
-                   TimeUnit.MILLISECONDS,
-                   period);
-    assertTrue(latch.await(10, TimeUnit.SECONDS));
+                     i.decrementAndGet();
+                   },
+                   100,
+                   TimeUnit.MILLISECONDS);
 
+    Thread.sleep(300);
+    assertThat(i.get(), is(0));
   }
+
+
+
 
   @Test
   public void reverseEngineering() throws InterruptedException, ExecutionException {
@@ -40,7 +56,6 @@ public class TimerTest {
 
     Thread.sleep(2000);
     System.out.println(f.get());
-
   }
 
   @Test
@@ -50,7 +65,7 @@ public class TimerTest {
 
     final HashWheelTimer timer = new HashWheelTimer("timer",
                                                     10,
-                                                    32768,
+                                                    1024,
                                                     new WaitStrategy.BusySpinWait(),
                                                     Executors.newFixedThreadPool(16));
 
@@ -63,7 +78,7 @@ public class TimerTest {
       timer.schedule(() -> {
         arr[idx] = System.currentTimeMillis();
         latch.countDown();
-      }, delay, delay, TimeUnit.MILLISECONDS);
+      }, delay, TimeUnit.MILLISECONDS);
       //      if (i % 1000 == 0) {
       //        //System.out.println(i);
       //        Thread.sleep(10);
