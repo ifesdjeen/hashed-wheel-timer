@@ -7,6 +7,7 @@ interface Registration<T> extends ScheduledFuture<T>, Runnable {
   enum Status {
     CANCELLED,
     READY
+    // COMPLETED ??
   }
 
   long rounds();
@@ -54,8 +55,8 @@ interface Registration<T> extends ScheduledFuture<T>, Runnable {
   @Override
   default int compareTo(Delayed o) {
     Registration other = (Registration) o;
-    int r1 = rounds();
-    int r2 = other.rounds();
+    long r1 = rounds();
+    long r2 = other.rounds();
     if (r1 == r2) {
       return other == this ? 0 : -1;
     } else {
