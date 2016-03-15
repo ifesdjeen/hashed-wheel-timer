@@ -9,7 +9,7 @@ interface Registration<T> extends ScheduledFuture<T>, Runnable {
     READY
   }
 
-  int rounds();
+  long rounds();
 
   /**
    * Decrement an amount of runs Registration has to run until it's elapsed

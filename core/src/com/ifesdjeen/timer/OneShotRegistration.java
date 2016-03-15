@@ -8,10 +8,10 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class OneShotRegistration<T> extends CompletableFuture<T> implements Registration<T> {
 
-  private volatile int rounds;
+  private volatile long rounds;
   private volatile Status status;
 
-  public OneShotRegistration(int rounds) {
+  public OneShotRegistration(long rounds) {
     this.rounds = rounds;
     this.status = Status.READY;
   }
@@ -58,7 +58,7 @@ public abstract class OneShotRegistration<T> extends CompletableFuture<T> implem
   }
 
   @Override
-  public int rounds() {
+  public long rounds() {
     return rounds;
   }
 
@@ -66,7 +66,7 @@ public abstract class OneShotRegistration<T> extends CompletableFuture<T> implem
 
     private final Callable<T> callable;
 
-    public CallableOneShotRegistration(int rounds, Callable<T> callable) {
+    public CallableOneShotRegistration(long rounds, Callable<T> callable) {
       super(rounds);
       this.callable = callable;
     }
@@ -85,7 +85,7 @@ public abstract class OneShotRegistration<T> extends CompletableFuture<T> implem
 
     private final Runnable delegate;
 
-    public RunnableOneShotRegistration(int rounds, Runnable runnable) {
+    public RunnableOneShotRegistration(long rounds, Runnable runnable) {
       super(rounds);
       this.delegate = runnable;
     }

@@ -212,10 +212,9 @@ public class HashWheelTimer implements ScheduledExecutorService {
                                           Runnable runnable) {
     isTrue(firstDelay >= resolution,
            "Cannot schedule tasks for amount of time less than timer precision.");
-    // TODO: guard overflows or switch back to longs
-
-    int firstFireOffset = (int) firstDelay / resolution;
-    int firstFireRounds = firstFireOffset / wheel.getBufferSize();
+    // TODO: check if switching to int gives anything
+    long firstFireOffset = firstDelay / resolution;
+    long firstFireRounds = firstFireOffset / wheel.getBufferSize();
 
     Registration<?> r = new OneShotRegistration.RunnableOneShotRegistration(firstFireRounds, runnable);
     wheel.get(wheel.getCursor() + firstFireOffset + 1).add(r);
