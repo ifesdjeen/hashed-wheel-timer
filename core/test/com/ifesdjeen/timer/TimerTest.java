@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class TimerTest {
@@ -28,7 +29,7 @@ public class TimerTest {
   }
 
   @Test
-  public void scheduleOneShotTest() throws InterruptedException {
+  public void scheduleOneShotRunnableTest() throws InterruptedException {
     AtomicInteger i = new AtomicInteger(1);
     timer.schedule(() -> {
                      i.decrementAndGet();
@@ -40,7 +41,49 @@ public class TimerTest {
     assertThat(i.get(), is(0));
   }
 
+  @Test
+  public void testOneShotRunnableFuture() throws InterruptedException, TimeoutException, ExecutionException {
+    AtomicInteger i = new AtomicInteger(1);
+    long start = System.currentTimeMillis();
+    assertNull(timer.schedule(() -> {
+                                i.decrementAndGet();
+                              },
+                              100,
+                              TimeUnit.MILLISECONDS)
+                    .get(10, TimeUnit.SECONDS));
+    long end = System.currentTimeMillis();
+    assertTrue(end - start > 100);
+  }
 
+  @Test
+  public void scheduleOneShotCallableTest() throws InterruptedException {
+    AtomicInteger i = new AtomicInteger(1);
+    timer.schedule(() -> {
+                     i.decrementAndGet();
+                     return "Hello";
+                   },
+                   100,
+                   TimeUnit.MILLISECONDS);
+
+    Thread.sleep(300);
+    assertThat(i.get(), is(0));
+  }
+
+  @Test
+  public void testOneShotCallableFuture() throws InterruptedException, TimeoutException, ExecutionException {
+    AtomicInteger i = new AtomicInteger(1);
+    long start = System.currentTimeMillis();
+    assertThat(timer.schedule(() -> {
+                                i.decrementAndGet();
+                                return "Hello";
+                              },
+                              100,
+                              TimeUnit.MILLISECONDS)
+                    .get(10, TimeUnit.SECONDS),
+               is("Hello"));
+    long end = System.currentTimeMillis();
+    assertTrue(end - start > 100);
+  }
 
 
   @Test
