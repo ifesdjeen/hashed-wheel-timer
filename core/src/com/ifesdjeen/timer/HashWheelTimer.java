@@ -22,7 +22,6 @@ package com.ifesdjeen.timer;
 
 import com.lmax.disruptor.EventFactory;
 import com.lmax.disruptor.RingBuffer;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.util.Collection;
 import java.util.List;
@@ -199,13 +198,13 @@ public class HashWheelTimer implements ScheduledExecutorService {
   }
 
   @Override
-  public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-    throw new NotImplementedException();
+  public ScheduledFuture<?> scheduleAtFixedRate(Runnable runnable, long initialDelay, long period, TimeUnit unit) {
+    return scheduleFixedRate(TimeUnit.MILLISECONDS.convert(period, unit), initialDelay, constantlyNull(runnable));
   }
 
   @Override
-  public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
-    throw new NotImplementedException();
+  public ScheduledFuture<?> scheduleWithFixedDelay(Runnable runnable, long initialDelay, long delay, TimeUnit unit) {
+    return scheduleFixedDelay(TimeUnit.MILLISECONDS.convert(delay, unit), initialDelay, constantlyNull(runnable));
   }
 
   private <V> Registration<V> scheduleOneShot(long firstDelay,
@@ -216,34 +215,46 @@ public class HashWheelTimer implements ScheduledExecutorService {
     long firstFireOffset = firstDelay / resolution;
     long firstFireRounds = firstFireOffset / wheel.getBufferSize();
 
-    Registration<V> r = new OneShotRegistration<V>(firstFireRounds, callable);
+    Registration<V> r = new OneShotRegistration<V>(firstFireRounds, callable, firstDelay);
     wheel.get(wheel.getCursor() + firstFireOffset + 1).add(r);
     return r;
   }
 
-  //  private Registration<?> schedule(long recurringTimeout,
-  //                                     long firstDelay,
-  //                                     Runnable runnable) {
-  //    return schedule(recurringTimeout, firstDelay, runnable, false);
-  //  }
+  private <V> Registration<V> scheduleFixedRate(long recurringTimeout,
+                                                long firstDelay,
+                                                Callable<V> callable) {
+    isTrue(recurringTimeout >= resolution,
+           "Cannot schedule tasks for amount of time less than timer precision.");
 
-  //  private TimerRegistration schedule(long recurringTimeout,
-  //                                     long firstDelay,
-  //                                     Runnable runnable,
-  //                                     boolean cancelAfterUse) {
-  //    isTrue(recurringTimeout >= resolution,
-  //           "Cannot schedule tasks for amount of time less than timer precision.");
-  //
-  //    long offset = recurringTimeout / resolution;
-  //    long rounds = offset / wheel.getBufferSize();
-  //
-  //    long firstFireOffset = firstDelay / resolution;
-  //    long firstFireRounds = firstFireOffset / wheel.getBufferSize();
-  //
-  //    TimerRegistration r = new TimerRegistration(firstFireRounds, offset, rounds, runnable, cancelAfterUse);
-  //    wheel.get(wheel.getCursor() + firstFireOffset + 1).add(r);
-  //    return r;
-  //  }
+    long offset = recurringTimeout / resolution;
+    long rounds = offset / wheel.getBufferSize();
+
+    long firstFireOffset = firstDelay / resolution;
+    long firstFireRounds = firstFireOffset / wheel.getBufferSize();
+
+    System.out.println(offset);
+    Registration<V> r = new FixedRateRegistration<>(firstFireRounds, callable, recurringTimeout, rounds, offset);
+    wheel.get(wheel.getCursor() + firstFireOffset + 1).add(r);
+    return r;
+  }
+
+  private <V> Registration<V> scheduleFixedDelay(long recurringTimeout,
+                                                 long firstDelay,
+                                                 Callable<V> callable) {
+    isTrue(recurringTimeout >= resolution,
+           "Cannot schedule tasks for amount of time less than timer precision.");
+
+    long offset = recurringTimeout / resolution;
+    long rounds = offset / wheel.getBufferSize();
+
+    long firstFireOffset = firstDelay / resolution;
+    long firstFireRounds = firstFireOffset / wheel.getBufferSize();
+
+    Registration<V> r = new FixedDelayRegistration<>(firstFireRounds, callable, recurringTimeout, rounds, offset,
+                                                     this::reschedule);
+    wheel.get(wheel.getCursor() + firstFireOffset + 1).add(r);
+    return r;
+  }
 
   /**
    * Rechedule a {@link TimerRegistration}  for the next fire
