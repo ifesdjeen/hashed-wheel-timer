@@ -4,8 +4,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.HashMap;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -19,7 +23,8 @@ public class TimerTest {
 
   @Before
   public void before() {
-    timer = new HashWheelTimer(10, 8, new WaitStrategy.SleepWait());
+    // TODO: throw a warning in case wheel size is too small to guarantee correct firing
+    timer = new HashWheelTimer(10, 1024, new WaitStrategy.SleepWait());
   }
 
   @After
@@ -85,104 +90,109 @@ public class TimerTest {
     assertTrue(end - start > 100);
   }
 
-
   @Test
-  public void reverseEngineering() throws InterruptedException, ExecutionException {
-    ScheduledExecutorService timer = Executors.newScheduledThreadPool(16);
-
-    ScheduledFuture<?> f = timer.schedule(new Callable<Object>() {
-      @Override
-      public Object call() {
-        return new HashMap<>();
-      }
-    }, 1, TimeUnit.SECONDS);
-
-    Thread.sleep(2000);
-    System.out.println(f.get());
-  }
-
-  @Test
-  public void hashWheelTimerTest() throws InterruptedException {
-    int submittedTasks = 1000000;
-    int delay = 1000;
-
-    final HashWheelTimer timer = new HashWheelTimer("timer",
-                                                    10,
-                                                    1024,
-                                                    new WaitStrategy.BusySpinWait(),
-                                                    Executors.newFixedThreadPool(16));
-
-    final CountDownLatch latch = new CountDownLatch(submittedTasks);
-    long[] arr = new long[submittedTasks];
-
+  public void fixedRateFirstFireTest() throws InterruptedException, TimeoutException, ExecutionException {
+    CountDownLatch latch = new CountDownLatch(1);
     long start = System.currentTimeMillis();
-    for (int i = 0; i < submittedTasks; i++) {
-      final int idx = i;
-      timer.schedule(() -> {
-        arr[idx] = System.currentTimeMillis();
-        latch.countDown();
-      }, delay, TimeUnit.MILLISECONDS);
-      //      if (i % 1000 == 0) {
-      //        //System.out.println(i);
-      //        Thread.sleep(10);
-      //      }
-    }
-
-    assertThat(latch.await(10, TimeUnit.SECONDS), is(true));
-
+    timer.scheduleAtFixedRate(() -> {
+                                latch.countDown();
+                              },
+                              100,
+                              100,
+                              TimeUnit.MILLISECONDS);
+    assertTrue(latch.await(10, TimeUnit.SECONDS));
     long end = System.currentTimeMillis();
-    long max = 0;
-    long sum = 0;
-    for (int i = 0; i < submittedTasks; i++) {
-      long diff = end - arr[i];
-      sum += diff;
-      if (diff > max) {
-        max = diff;
-      }
-    }
-
-    //
-    System.out.println(
-      "Hash Wheel: Elapsed:" + (end - start) + ", Max Deviation: " + max + ", Mean Deviation: " + (sum / arr.length));
+    assertTrue(end - start > 100);
   }
 
   @Test
-  public void jdkTimerTest() throws InterruptedException {
-    ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
+  public void delayBetweenEvents() throws InterruptedException, TimeoutException, ExecutionException {
+    CountDownLatch latch = new CountDownLatch(2);
+    List<Long> r = new ArrayList<>();
+    timer.scheduleAtFixedRate(() -> {
 
-    int submittedTasks = 1000000;
-    int delay = 1000;
+                                r.add(System.currentTimeMillis());
 
-    final CountDownLatch latch = new CountDownLatch(submittedTasks);
-    long[] arr = new long[submittedTasks];
+                                latch.countDown();
 
-    long start = System.currentTimeMillis();
-    for (int i = 0; i < submittedTasks; i++) {
-      final int idx = i;
-      timer.schedule(() -> {
-        arr[idx] = System.currentTimeMillis();
-        latch.countDown();
-      }, delay, TimeUnit.MILLISECONDS);
-      //      if (i % 1000 == 0) {
-      //        //System.out.println(i);
-      //        Thread.sleep(10);
-      //      }
-    }
+                                if (latch.getCount() == 0)
+                                  return; // to avoid sleep interruptions
 
-    assertThat(latch.await(10, TimeUnit.SECONDS), is(true));
+                                try {
+                                  Thread.sleep(50);
+                                } catch (InterruptedException e) {
+                                  e.printStackTrace();
+                                }
 
-    long end = System.currentTimeMillis();
-    long max = 0;
-    long sum = 0;
-    for (int i = 0; i < submittedTasks; i++) {
-      long diff = end - arr[i];
-      sum += diff;
-      if (diff > max) {
-        max = diff;
-      }
-    }
-    //
-    System.out.println(
-      "JDK Timer: Elapsed:" + (end - start) + ", Max Deviation: " + max + ", Mean Deviation: " + (sum / arr.length));
+                                r.add(System.currentTimeMillis());
+                              },
+                              100,
+                              100,
+                              TimeUnit.MILLISECONDS);
+    assertTrue(latch.await(10, TimeUnit.SECONDS));
+    // time difference between the beginning of second tick and end of first one
+    assertTrue(r.get(2) - r.get(1) <= 50);
+    //    assertTrue(r.get(2) - r.get(1) > 100);
   }
+
+  @Test
+  public void delayBetweenFixedDelayEvents() throws InterruptedException, TimeoutException, ExecutionException {
+    CountDownLatch latch = new CountDownLatch(2);
+    List<Long> r = new ArrayList<>();
+    timer.scheduleWithFixedDelay(() -> {
+
+                                r.add(System.currentTimeMillis());
+
+                                latch.countDown();
+
+                                if (latch.getCount() == 0)
+                                  return; // to avoid sleep interruptions
+
+                                try {
+                                  Thread.sleep(50);
+                                } catch (InterruptedException e) {
+                                  e.printStackTrace();
+                                }
+
+                                r.add(System.currentTimeMillis());
+                              },
+                              100,
+                              100,
+                              TimeUnit.MILLISECONDS);
+    assertTrue(latch.await(10, TimeUnit.SECONDS));
+    // time difference between the beginning of second tick and end of first one
+    assertTrue(r.get(2) - r.get(1) > 100);
+  }
+
+  @Test
+  public void fixedRateSubsequentFireTest() throws InterruptedException, TimeoutException, ExecutionException {
+    CountDownLatch latch = new CountDownLatch(10);
+    long start = System.currentTimeMillis();
+    timer.scheduleAtFixedRate(() -> {
+                                latch.countDown();
+                                //thre
+                              },
+                              100,
+                              100,
+                              TimeUnit.MILLISECONDS);
+    assertTrue(latch.await(10, TimeUnit.SECONDS));
+    long end = System.currentTimeMillis();
+    assertTrue(end - start > 1000);
+  }
+
+  //  @Test
+  //  public void reverseEngineering() throws InterruptedException, ExecutionException {
+  //    ScheduledExecutorService timer = Executors.newScheduledThreadPool(16);
+  //
+  //    ScheduledFuture<?> f = timer.schedule(new Callable<Object>() {
+  //      @Override
+  //      public Object call() {
+  //        return new HashMap<>();
+  //      }
+  //    }, 1, TimeUnit.SECONDS);
+  //
+  //    Thread.sleep(2000);
+  //    System.out.println(f.get());
+  //  }
+
 }
