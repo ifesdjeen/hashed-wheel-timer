@@ -44,9 +44,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Oleksandr Petrov
  */
 public class HashWheelTimer implements ScheduledExecutorService {
-  private static final boolean CANCEL_AFTER_USE   = true;
-  public static final  int     DEFAULT_WHEEL_SIZE = 512;
-  private static final String  DEFAULT_TIMER_NAME = "hash-wheel-timer";
+
+  public static final  int    DEFAULT_RESOLUTION = 100;
+  public static final  int    DEFAULT_WHEEL_SIZE = 512;
+  private static final String DEFAULT_TIMER_NAME = "hash-wheel-timer";
 
   private final RingBuffer<Set<Registration<?>>> wheel;
   private final int                              resolution;
@@ -59,7 +60,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
    * default wheel size.
    */
   public HashWheelTimer() {
-    this(100, DEFAULT_WHEEL_SIZE, new WaitStrategy.SleepWait());
+    this(DEFAULT_RESOLUTION, DEFAULT_WHEEL_SIZE, new WaitStrategy.SleepWait());
   }
 
   /**
@@ -251,7 +252,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
     long firstFireRounds = firstFireOffset / wheel.getBufferSize();
 
     Registration<V> r = new FixedDelayRegistration<>(firstFireRounds, callable, recurringTimeout, rounds, offset,
-                                                     this::reschedule);
+                                                     this::rescheduleForward);
     wheel.get(wheel.getCursor() + firstFireOffset + 1).add(r);
     return r;
   }
@@ -264,6 +265,11 @@ public class HashWheelTimer implements ScheduledExecutorService {
   private void reschedule(Registration<?> registration) {
     registration.reset();
     wheel.get(wheel.getCursor() + registration.getOffset()).add(registration);
+  }
+
+  private void rescheduleForward(Registration<?> registration) {
+    registration.reset();
+    wheel.get(wheel.getCursor() + registration.getOffset() + 1).add(registration);
   }
 
   @Override
