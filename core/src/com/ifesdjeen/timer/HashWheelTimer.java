@@ -195,7 +195,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
     long firstFireRounds = firstFireOffset / wheel.getBufferSize();
 
     Registration<V> r = new OneShotRegistration<V>(firstFireRounds, callable, firstDelay);
-    wheel.get(wheel.getCursor() + firstFireOffset + 1).add(r);
+    wheel.get(wheel.getCursor() + firstFireOffset).add(r);
     return r;
   }
 
@@ -212,7 +212,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
     long firstFireRounds = firstFireOffset / wheel.getBufferSize();
 
     Registration<V> r = new FixedRateRegistration<>(firstFireRounds, callable, recurringTimeout, rounds, offset);
-    wheel.get(wheel.getCursor() + firstFireOffset + 1).add(r);
+    wheel.get(wheel.getCursor() + firstFireOffset).add(r);
     return r;
   }
 
@@ -230,7 +230,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
 
     Registration<V> r = new FixedDelayRegistration<>(firstFireRounds, callable, recurringTimeout, rounds, offset,
                                                      this::rescheduleForward);
-    wheel.get(wheel.getCursor() + firstFireOffset + 1).add(r);
+    wheel.get(wheel.getCursor() + firstFireOffset).add(r);
     return r;
   }
 

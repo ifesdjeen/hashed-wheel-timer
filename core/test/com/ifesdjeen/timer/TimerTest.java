@@ -57,7 +57,7 @@ public class TimerTest {
                               TimeUnit.MILLISECONDS)
                     .get(10, TimeUnit.SECONDS));
     long end = System.currentTimeMillis();
-    assertTrue(end - start > 100);
+    assertTrue(end - start >= 100);
   }
 
   @Test
@@ -102,7 +102,7 @@ public class TimerTest {
                               TimeUnit.MILLISECONDS);
     assertTrue(latch.await(10, TimeUnit.SECONDS));
     long end = System.currentTimeMillis();
-    assertTrue(end - start > 100);
+    assertTrue(end - start >= 100);
   }
 
   @Test
