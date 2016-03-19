@@ -24,7 +24,7 @@ of events on given resolution, an array of linked lists (alternatively - sets or
 arrays, YMMV) is preallocated. When event is scheduled, it's address is found by
 dividing deadline time `t` by `resolution` and `wheel size`.
 
-This implementation was contributed to Reactor in (2014)[https://github.com/reactor/reactor/commit/53c0dcfab40b91838694843729c85c2effe7272b],
+This implementation was contributed to Reactor in [2014](https://github.com/reactor/reactor/commit/53c0dcfab40b91838694843729c85c2effe7272b),
 and now is extracted and adopted to be used as a standalone library with benchmarks,
 `debounce`, `throttle` implementations, `ScheduledExecutorService` impl and
 other bells and whistles.
