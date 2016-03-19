@@ -23,8 +23,8 @@ public class TimerTest {
 
   @Before
   public void before() {
-    // TODO: throw a warning in case wheel size is too small to guarantee correct firing
-    timer = new HashWheelTimer(10, 1024, new WaitStrategy.SleepWait());
+    // TODO: run tests on different sequences
+    timer = new HashWheelTimer(10, 8, new WaitStrategy.SleepWait());
   }
 
   @After
@@ -106,7 +106,7 @@ public class TimerTest {
   }
 
   @Test
-  public void delayBetweenEvents() throws InterruptedException, TimeoutException, ExecutionException {
+  public void delayBetweenFixedRateEvents() throws InterruptedException, TimeoutException, ExecutionException {
     CountDownLatch latch = new CountDownLatch(2);
     List<Long> r = new ArrayList<>();
     timer.scheduleAtFixedRate(() -> {
@@ -180,19 +180,6 @@ public class TimerTest {
     assertTrue(end - start > 1000);
   }
 
-  //  @Test
-  //  public void reverseEngineering() throws InterruptedException, ExecutionException {
-  //    ScheduledExecutorService timer = Executors.newScheduledThreadPool(16);
-  //
-  //    ScheduledFuture<?> f = timer.schedule(new Callable<Object>() {
-  //      @Override
-  //      public Object call() {
-  //        return new HashMap<>();
-  //      }
-  //    }, 1, TimeUnit.SECONDS);
-  //
-  //    Thread.sleep(2000);
-  //    System.out.println(f.get());
-  //  }
-
+  // TODO: precision test
+  // capture deadline and check the deviation from the deadline for different amounts of tasks
 }
