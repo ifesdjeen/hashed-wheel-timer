@@ -114,6 +114,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
         long deadline = System.currentTimeMillis();
 
         while (true) {
+          // TODO: consider extracting processing until deadline for test purposes
           Set<Registration<?>> registrations = wheel.get(wheel.getCursor());
 
           for (Registration r : registrations) {
@@ -157,29 +158,6 @@ public class HashWheelTimer implements ScheduledExecutorService {
     this.loop.submit(loopRunnable);
     this.executor = exec;
   }
-
-  //  public TimerRegistration schedule(Runnable runnable,
-  //                                    long period,
-  //                                    TimeUnit timeUnit,
-  //                                    long delayInMilliseconds) {
-  //    isTrue(!loop.isTerminated(), "Cannot submit tasks to this timer as it has been cancelled.");
-  //    return schedule(TimeUnit.MILLISECONDS.convert(period, timeUnit), delayInMilliseconds, runnable);
-  //  }
-  //
-  //  private TimerRegistration submit(Runnable runnable,
-  //                                  long period,
-  //                                  TimeUnit timeUnit) {
-  //    isTrue(!loop.isTerminated(), "Cannot submit tasks to this timer as it has been cancelled.");
-  //    long ms = TimeUnit.MILLISECONDS.convert(period, timeUnit);
-  //    return schedule(ms, ms, runnable, true);
-  //  }
-
-  //  public TimerRegistration schedule(Runnable runnable,
-  //                                    long period,
-  //                                    long delay,
-  //                                    TimeUnit timeUnit) {
-  //    return schedule(TimeUnit.MILLISECONDS.convert(period, timeUnit), delay, runnable);
-  //  }
 
   @Override
   public ScheduledFuture<?> submit(Runnable runnable) {
@@ -233,7 +211,6 @@ public class HashWheelTimer implements ScheduledExecutorService {
     long firstFireOffset = firstDelay / resolution;
     long firstFireRounds = firstFireOffset / wheel.getBufferSize();
 
-    System.out.println(offset);
     Registration<V> r = new FixedRateRegistration<>(firstFireRounds, callable, recurringTimeout, rounds, offset);
     wheel.get(wheel.getCursor() + firstFireOffset + 1).add(r);
     return r;
@@ -258,7 +235,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
   }
 
   /**
-   * Rechedule a {@link TimerRegistration}  for the next fire
+   * Rechedule a {@link Registration} for the next fire
    *
    * @param registration
    */
@@ -319,7 +296,6 @@ public class HashWheelTimer implements ScheduledExecutorService {
 
   @Override
   public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-
     return this.loop.awaitTermination(timeout, unit) && this.executor.awaitTermination(timeout, unit);
   }
 
