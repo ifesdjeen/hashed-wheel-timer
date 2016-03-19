@@ -18,7 +18,7 @@ public class HashWheelTimerBenchmark {
   @Param({"100"})
   public int delay;
 
-  @Param({"10000"}) // , "100000", "1000000"
+  @Param({"10000", "100000", "1000000"})
   public int times;
 
   private final AtomicInteger counterDown = new AtomicInteger();
@@ -30,7 +30,7 @@ public class HashWheelTimerBenchmark {
 
   @TearDown
   public void teardown() throws InterruptedException {
-    timer.shutdown();
+    timer.shutdownNow();
     timer.awaitTermination(10, TimeUnit.SECONDS);
   }
 
@@ -48,9 +48,10 @@ public class HashWheelTimerBenchmark {
                      TimeUnit.MILLISECONDS);
     }
 
-    while (!ctrl.stopMeasurement && counterDown.get() != 0) {
+    while (!ctrl.stopMeasurement && counterDown.get() > 0) {
       // spin
     }
+
   }
 
 
