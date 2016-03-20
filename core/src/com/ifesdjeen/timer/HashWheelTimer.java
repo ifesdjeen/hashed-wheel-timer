@@ -53,9 +53,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
   private final ExecutorService        executor;
   private final WaitStrategy           waitStrategy;
 
-//  protected long p1, p2, p3, p4, p5, p6, p7;
   private volatile int cursor = 0;
-//  protected long p8, p9, p10, p11, p12, p13, p14;
 
   /**
    * Create a new {@code HashWheelTimer} using the given with default resolution of 100 NANOSECONDS and
@@ -343,14 +341,6 @@ public class HashWheelTimer implements ScheduledExecutorService {
       return null;
     };
   }
-
-//  public long sum(){
-//    return p1 + p2 + p3 + p4 + p5 + p6 + p7;
-//  }
-//
-//  public long sum2(){
-//    return p8 + p9 + p10 + p11 + p12 + p13 + p14;
-//  }
 
 }
 
