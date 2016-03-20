@@ -3,6 +3,7 @@ package com.ifesdjeen.timer;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Control;
 
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -18,14 +19,18 @@ public class HashWheelTimerBenchmark {
   @Param({"100"})
   public int delay;
 
-  @Param({"10000", "100000"})
+  @Param({"100000"})
   public int times;
 
   private final AtomicInteger counterDown = new AtomicInteger();
 
   @Setup
   public void setup() {
-    timer = new HashWheelTimer(10, 1024, new WaitStrategy.BusySpinWait());
+    timer = new HashWheelTimer("hash-wheel-timer",
+                               10,
+                               1024,
+                               new WaitStrategy.BusySpinWait(),
+                               Executors.newFixedThreadPool(8));
   }
 
   @TearDown

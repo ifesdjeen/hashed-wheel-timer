@@ -27,7 +27,7 @@ public class JdkTimerBenchmark {
 
   @Setup
   public void setup() {
-    timer = Executors.newSingleThreadScheduledExecutor();
+    timer = Executors.newScheduledThreadPool(8);
   }
 
   @TearDown
