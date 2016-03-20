@@ -24,7 +24,9 @@ public class TimerTest {
   @Before
   public void before() {
     // TODO: run tests on different sequences
-    timer = new HashWheelTimer(10, 8, new WaitStrategy.SleepWait());
+    timer = new HashWheelTimer((int)TimeUnit.NANOSECONDS.convert(10, TimeUnit.MILLISECONDS),
+                               8,
+                               new WaitStrategy.BusySpinWait());
   }
 
   @After

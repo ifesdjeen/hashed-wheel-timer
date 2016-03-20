@@ -38,8 +38,8 @@ public interface WaitStrategy {
   public static class BusySpinWait implements WaitStrategy {
 
     @Override
-    public void waitUntil(long deadlineMilliseconds) throws InterruptedException {
-      while (deadlineMilliseconds >= System.currentTimeMillis()) {
+    public void waitUntil(long deadlineNanoseconds) throws InterruptedException {
+      while (deadlineNanoseconds >= System.nanoTime()) {
         if (Thread.currentThread().isInterrupted()) {
           throw new InterruptedException();
         }

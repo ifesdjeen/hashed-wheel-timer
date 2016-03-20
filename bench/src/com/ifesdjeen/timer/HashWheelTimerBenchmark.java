@@ -27,7 +27,7 @@ public class HashWheelTimerBenchmark {
   @Setup
   public void setup() {
     timer = new HashWheelTimer("hash-wheel-timer",
-                               10,
+                               (int)TimeUnit.NANOSECONDS.convert(10, TimeUnit.MILLISECONDS),
                                1024,
                                new WaitStrategy.BusySpinWait(),
                                Executors.newFixedThreadPool(8));

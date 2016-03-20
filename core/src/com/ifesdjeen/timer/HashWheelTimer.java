@@ -53,12 +53,12 @@ public class HashWheelTimer implements ScheduledExecutorService {
   private final ExecutorService        executor;
   private final WaitStrategy           waitStrategy;
 
-  //protected long p1, p2, p3, p4, p5, p6, p7;
+//  protected long p1, p2, p3, p4, p5, p6, p7;
   private volatile int cursor = 0;
-  //protected long p8, p9, p10, p11, p12, p13, p14;
+//  protected long p8, p9, p10, p11, p12, p13, p14;
 
   /**
-   * Create a new {@code HashWheelTimer} using the given with default resolution of 100 milliseconds and
+   * Create a new {@code HashWheelTimer} using the given with default resolution of 100 NANOSECONDS and
    * default wheel size.
    */
   public HashWheelTimer() {
@@ -69,7 +69,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
    * Create a new {@code HashWheelTimer} using the given timer resolution. All times will rounded up to the closest
    * multiple of this resolution.
    *
-   * @param resolution the resolution of this timer, in milliseconds
+   * @param resolution the resolution of this timer, in NANOSECONDS
    */
   public HashWheelTimer(int resolution) {
     this(resolution, DEFAULT_WHEEL_SIZE, new WaitStrategy.SleepWait());
@@ -79,7 +79,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
    * Create a new {@code HashWheelTimer} using the given timer {@data resolution} and {@data wheelSize}. All times will
    * rounded up to the closest multiple of this resolution.
    *
-   * @param res          resolution of this timer in milliseconds
+   * @param res          resolution of this timer in NANOSECONDS
    * @param wheelSize    size of the Ring Buffer supporting the Timer, the larger the wheel, the less the lookup time is
    *                     for sparse timeouts. Sane default is 512.
    * @param waitStrategy strategy for waiting for the next tick
@@ -93,7 +93,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
    * rounded up to the closest multiple of this resolution.
    *
    * @param name      name for daemon thread factory to be displayed
-   * @param res       resolution of this timer in milliseconds
+   * @param res       resolution of this timer in NANOSECONDS
    * @param wheelSize size of the Ring Buffer supporting the Timer, the larger the wheel, the less the lookup time is
    *                  for sparse timeouts. Sane default is 512.
    * @param strategy  strategy for waiting for the next tick
@@ -113,7 +113,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
     final Runnable loopRunnable = new Runnable() {
       @Override
       public void run() {
-        long deadline = System.currentTimeMillis();
+        long deadline = System.nanoTime();
 
         while (true) {
           // TODO: consider extracting processing until deadline for test purposes
@@ -170,22 +170,22 @@ public class HashWheelTimer implements ScheduledExecutorService {
   public ScheduledFuture<?> schedule(Runnable runnable,
                                      long period,
                                      TimeUnit timeUnit) {
-    return scheduleOneShot(TimeUnit.MILLISECONDS.convert(period, timeUnit), constantlyNull(runnable));
+    return scheduleOneShot(TimeUnit.NANOSECONDS.convert(period, timeUnit), constantlyNull(runnable));
   }
 
   @Override
   public <V> ScheduledFuture<V> schedule(Callable<V> callable, long period, TimeUnit timeUnit) {
-    return scheduleOneShot(TimeUnit.MILLISECONDS.convert(period, timeUnit), callable);
+    return scheduleOneShot(TimeUnit.NANOSECONDS.convert(period, timeUnit), callable);
   }
 
   @Override
   public ScheduledFuture<?> scheduleAtFixedRate(Runnable runnable, long initialDelay, long period, TimeUnit unit) {
-    return scheduleFixedRate(TimeUnit.MILLISECONDS.convert(period, unit), initialDelay, constantlyNull(runnable));
+    return scheduleFixedRate(TimeUnit.NANOSECONDS.convert(period, unit), initialDelay, constantlyNull(runnable));
   }
 
   @Override
   public ScheduledFuture<?> scheduleWithFixedDelay(Runnable runnable, long initialDelay, long delay, TimeUnit unit) {
-    return scheduleFixedDelay(TimeUnit.MILLISECONDS.convert(delay, unit), initialDelay, constantlyNull(runnable));
+    return scheduleFixedDelay(TimeUnit.NANOSECONDS.convert(delay, unit), initialDelay, constantlyNull(runnable));
   }
 
   private <V> Registration<V> scheduleOneShot(long firstDelay,
@@ -252,7 +252,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
 
   private void rescheduleForward(Registration<?> registration) {
     registration.reset();
-    wheel[idx(cursor + registration.getOffset()) + 1].add(registration);
+    wheel[idx(cursor + registration.getOffset() + 1)].add(registration);
   }
 
   @Override
