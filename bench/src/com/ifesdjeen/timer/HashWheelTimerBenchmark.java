@@ -18,7 +18,7 @@ public class HashWheelTimerBenchmark {
   @Param({"100"})
   public int delay;
 
-  @Param({"10000", "100000", "1000000"})
+  @Param({"10000", "100000"})
   public int times;
 
   private final AtomicInteger counterDown = new AtomicInteger();
