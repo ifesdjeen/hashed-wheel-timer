@@ -15,7 +15,10 @@ were described by the [freebsd](http://people.freebsd.org/~davide/asia/callout_p
 in many other searches.
 
 Many modern Java frameworks have their own implementations of Timing Wheels, for example,
-[Netty](), [Agrona](), [Reactor](), [Kafka](https://github.com/apache/kafka/blob/trunk/core/src/main/scala/kafka/utils/timer/Timer.scala)
+[Netty](https://github.com/netty/netty/blob/4.1/common/src/main/java/io/netty/util/HashedWheelTimer.java),
+[Agrona](https://github.com/real-logic/Agrona/blob/master/src/main/java/uk/co/real_logic/agrona/TimerWheel.java),
+[Reactor](https://github.com/reactor/reactor-core/blob/master/src/main/java/reactor/core/timer/HashWheelTimer.java),
+[Kafka](https://github.com/apache/kafka/blob/trunk/core/src/main/scala/kafka/utils/timer/Timer.scala)
 and many others. Of course, every implementation is adapted for the needs of the particular
 framework.
 
