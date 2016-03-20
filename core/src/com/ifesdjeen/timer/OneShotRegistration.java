@@ -7,12 +7,12 @@ import java.util.concurrent.TimeUnit;
 class OneShotRegistration<T> extends CompletableFuture<T> implements Registration<T> {
 
   private final      Callable<T> callable;
-  protected volatile long        rounds;
+  protected volatile int         rounds;
   protected volatile Status      status;
 
   private final long delay;
 
-  public OneShotRegistration(long rounds, Callable<T> callable, long delay) {
+  public OneShotRegistration(int rounds, Callable<T> callable, long delay) {
     this.rounds = rounds;
     this.status = Status.READY;
     this.callable = callable;
@@ -46,7 +46,7 @@ class OneShotRegistration<T> extends CompletableFuture<T> implements Registratio
   }
 
   @Override
-  public long getOffset() {
+  public int getOffset() {
     throw new RuntimeException("One Shot Registration can not be rescheduled");
   }
 
@@ -61,7 +61,7 @@ class OneShotRegistration<T> extends CompletableFuture<T> implements Registratio
   }
 
   @Override
-  public long rounds() {
+  public int rounds() {
     return rounds;
   }
 

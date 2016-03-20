@@ -10,7 +10,7 @@ interface Registration<T> extends ScheduledFuture<T>, Runnable {
     // COMPLETED ??
   }
 
-  long rounds();
+  int rounds();
 
   /**
    * Decrement an amount of runs Registration has to run until it's elapsed
@@ -41,12 +41,12 @@ interface Registration<T> extends ScheduledFuture<T>, Runnable {
   boolean isDone();
 
   /**
-   * Get the offset of the Registration relative to the current Ring Buffer position
+   * Get the offset of the Registration relative to the current cursor position
    * to make it fire timely.
    *
    * @return the offset of current Registration
    */
-  long getOffset();
+  int getOffset();
 
   boolean isCancelAfterUse();
 

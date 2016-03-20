@@ -141,27 +141,27 @@ public class TimerTest {
     List<Long> r = new ArrayList<>();
     timer.scheduleWithFixedDelay(() -> {
 
-                                r.add(System.currentTimeMillis());
+                                   r.add(System.currentTimeMillis());
 
-                                latch.countDown();
+                                   latch.countDown();
 
-                                if (latch.getCount() == 0)
-                                  return; // to avoid sleep interruptions
+                                   if (latch.getCount() == 0)
+                                     return; // to avoid sleep interruptions
 
-                                try {
-                                  Thread.sleep(50);
-                                } catch (InterruptedException e) {
-                                  e.printStackTrace();
-                                }
+                                   try {
+                                     Thread.sleep(50);
+                                   } catch (InterruptedException e) {
+                                     e.printStackTrace();
+                                   }
 
-                                r.add(System.currentTimeMillis());
-                              },
-                              100,
-                              100,
-                              TimeUnit.MILLISECONDS);
+                                   r.add(System.currentTimeMillis());
+                                 },
+                                 100,
+                                 100,
+                                 TimeUnit.MILLISECONDS);
     assertTrue(latch.await(10, TimeUnit.SECONDS));
     // time difference between the beginning of second tick and end of first one
-    assertTrue(r.get(2) - r.get(1) > 100);
+    assertTrue(r.get(2) - r.get(1) >= 100);
   }
 
   @Test
@@ -177,7 +177,7 @@ public class TimerTest {
                               TimeUnit.MILLISECONDS);
     assertTrue(latch.await(10, TimeUnit.SECONDS));
     long end = System.currentTimeMillis();
-    assertTrue(end - start > 1000);
+    assertTrue(end - start >= 1000);
   }
 
   // TODO: precision test

@@ -20,9 +20,6 @@
 
 package com.ifesdjeen.timer;
 
-import com.lmax.disruptor.EventFactory;
-import com.lmax.disruptor.RingBuffer;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -49,11 +46,16 @@ public class HashWheelTimer implements ScheduledExecutorService {
   public static final  int    DEFAULT_WHEEL_SIZE = 512;
   private static final String DEFAULT_TIMER_NAME = "hash-wheel-timer";
 
-  private final RingBuffer<Set<Registration<?>>> wheel;
-  private final int                              resolution;
-  private final ExecutorService                  loop;
-  private final ExecutorService                  executor;
-  private final WaitStrategy                     waitStrategy;
+  private final Set<Registration<?>>[] wheel;
+  private final int                    wheelSize;
+  private final int                    resolution;
+  private final ExecutorService        loop;
+  private final ExecutorService        executor;
+  private final WaitStrategy           waitStrategy;
+
+  //protected long p1, p2, p3, p4, p5, p6, p7;
+  private volatile int cursor = 0;
+  //protected long p8, p9, p10, p11, p12, p13, p14;
 
   /**
    * Create a new {@code HashWheelTimer} using the given with default resolution of 100 milliseconds and
@@ -100,12 +102,12 @@ public class HashWheelTimer implements ScheduledExecutorService {
   public HashWheelTimer(String name, int res, int wheelSize, WaitStrategy strategy, ExecutorService exec) {
     this.waitStrategy = strategy;
 
-    this.wheel = RingBuffer.createSingleProducer(new EventFactory<Set<Registration<?>>>() {
-      @Override
-      public Set<Registration<?>> newInstance() {
-        return new ConcurrentSkipListSet<Registration<?>>();
-      }
-    }, wheelSize);
+    this.wheel = new Set[wheelSize];
+    for (int i = 0; i < wheelSize; i++) {
+      wheel[i] = new ConcurrentSkipListSet<>();
+    }
+
+    this.wheelSize = wheelSize;
 
     this.resolution = res;
     final Runnable loopRunnable = new Runnable() {
@@ -115,7 +117,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
 
         while (true) {
           // TODO: consider extracting processing until deadline for test purposes
-          Set<Registration<?>> registrations = wheel.get(wheel.getCursor());
+          Set<Registration<?>> registrations = wheel[cursor];
 
           for (Registration r : registrations) {
             if (r.isCancelled()) {
@@ -140,7 +142,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
             return;
           }
 
-          wheel.publish(wheel.next());
+          cursor = (cursor + 1) % wheelSize;
         }
       }
     };
@@ -191,12 +193,16 @@ public class HashWheelTimer implements ScheduledExecutorService {
     isTrue(firstDelay >= resolution,
            "Cannot schedule tasks for amount of time less than timer precision.");
     // TODO: check if switching to int gives anything
-    long firstFireOffset = firstDelay / resolution;
-    long firstFireRounds = firstFireOffset / wheel.getBufferSize();
+    int firstFireOffset = (int) firstDelay / resolution;
+    int firstFireRounds = firstFireOffset / wheelSize;
 
     Registration<V> r = new OneShotRegistration<V>(firstFireRounds, callable, firstDelay);
-    wheel.get(wheel.getCursor() + firstFireOffset).add(r);
+    wheel[idx(cursor + firstFireOffset)].add(r);
     return r;
+  }
+
+  private int idx(int cursor) {
+    return cursor % wheelSize;
   }
 
   private <V> Registration<V> scheduleFixedRate(long recurringTimeout,
@@ -205,14 +211,14 @@ public class HashWheelTimer implements ScheduledExecutorService {
     isTrue(recurringTimeout >= resolution,
            "Cannot schedule tasks for amount of time less than timer precision.");
 
-    long offset = recurringTimeout / resolution;
-    long rounds = offset / wheel.getBufferSize();
+    int offset = (int) recurringTimeout / resolution;
+    int rounds = offset / wheelSize;
 
-    long firstFireOffset = firstDelay / resolution;
-    long firstFireRounds = firstFireOffset / wheel.getBufferSize();
+    int firstFireOffset = (int) firstDelay / resolution;
+    int firstFireRounds = firstFireOffset / wheelSize;
 
     Registration<V> r = new FixedRateRegistration<>(firstFireRounds, callable, recurringTimeout, rounds, offset);
-    wheel.get(wheel.getCursor() + firstFireOffset).add(r);
+    wheel[idx(cursor + firstFireOffset)].add(r);
     return r;
   }
 
@@ -222,15 +228,15 @@ public class HashWheelTimer implements ScheduledExecutorService {
     isTrue(recurringTimeout >= resolution,
            "Cannot schedule tasks for amount of time less than timer precision.");
 
-    long offset = recurringTimeout / resolution;
-    long rounds = offset / wheel.getBufferSize();
+    int offset = (int) recurringTimeout / resolution;
+    int rounds = offset / wheelSize;
 
-    long firstFireOffset = firstDelay / resolution;
-    long firstFireRounds = firstFireOffset / wheel.getBufferSize();
+    int firstFireOffset = (int) firstDelay / resolution;
+    int firstFireRounds = firstFireOffset / wheelSize;
 
     Registration<V> r = new FixedDelayRegistration<>(firstFireRounds, callable, recurringTimeout, rounds, offset,
                                                      this::rescheduleForward);
-    wheel.get(wheel.getCursor() + firstFireOffset).add(r);
+    wheel[idx(cursor + firstFireOffset)].add(r);
     return r;
   }
 
@@ -241,18 +247,18 @@ public class HashWheelTimer implements ScheduledExecutorService {
    */
   private void reschedule(Registration<?> registration) {
     registration.reset();
-    wheel.get(wheel.getCursor() + registration.getOffset()).add(registration);
+    wheel[idx(cursor + registration.getOffset())].add(registration);
   }
 
   private void rescheduleForward(Registration<?> registration) {
     registration.reset();
-    wheel.get(wheel.getCursor() + registration.getOffset() + 1).add(registration);
+    wheel[idx(cursor + registration.getOffset()) + 1].add(registration);
   }
 
   @Override
   public String toString() {
     return String.format("HashWheelTimer { Buffer Size: %d, Resolution: %d }",
-                         wheel.getBufferSize(),
+                         wheelSize,
                          resolution);
   }
 
@@ -337,5 +343,14 @@ public class HashWheelTimer implements ScheduledExecutorService {
       return null;
     };
   }
+
+//  public long sum(){
+//    return p1 + p2 + p3 + p4 + p5 + p6 + p7;
+//  }
+//
+//  public long sum2(){
+//    return p8 + p9 + p10 + p11 + p12 + p13 + p14;
+//  }
+
 }
 

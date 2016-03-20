@@ -4,20 +4,20 @@ import java.util.concurrent.Callable;
 
 class FixedRateRegistration<T> extends OneShotRegistration<T> {
 
-  private final long rescheduleRounds;
-  private final long scheduleOffset;
+  private final int rescheduleRounds;
+  private final int scheduleOffset;
 
-  public FixedRateRegistration(long rounds,
+  public FixedRateRegistration(int rounds,
                                Callable<T> callable,
                                long delay,
-                               long rescheduleRounds,
-                               long scheduleOffset) {
+                               int rescheduleRounds,
+                               int scheduleOffset) {
     super(rounds, callable, delay);
     this.rescheduleRounds = rescheduleRounds;
     this.scheduleOffset = scheduleOffset;
   }
 
-  public long getOffset() {
+  public int getOffset() {
     return this.scheduleOffset;
   }
 

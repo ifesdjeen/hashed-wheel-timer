@@ -5,15 +5,15 @@ import java.util.function.Consumer;
 
 class FixedDelayRegistration<T> extends OneShotRegistration<T> {
 
-  private final long                      rescheduleRounds;
-  private final long                      scheduleOffset;
+  private final int                       rescheduleRounds;
+  private final int                       scheduleOffset;
   private final Consumer<Registration<?>> rescheduleCallback;
 
-  public FixedDelayRegistration(long rounds,
+  public FixedDelayRegistration(int rounds,
                                 Callable<T> callable,
                                 long delay,
-                                long scheduleRounds,
-                                long scheduleOffset,
+                                int scheduleRounds,
+                                int scheduleOffset,
                                 Consumer<Registration<?>> rescheduleCallback) {
     super(rounds, callable, delay);
     this.rescheduleRounds = scheduleRounds;
@@ -21,7 +21,7 @@ class FixedDelayRegistration<T> extends OneShotRegistration<T> {
     this.rescheduleCallback = rescheduleCallback;
   }
 
-  public long getOffset() {
+  public int getOffset() {
     return this.scheduleOffset;
   }
 
