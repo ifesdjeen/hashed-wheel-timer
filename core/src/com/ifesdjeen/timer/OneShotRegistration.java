@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit;
 class OneShotRegistration<T> extends CompletableFuture<T> implements Registration<T> {
 
   private final      Callable<T> callable;
-  protected volatile int         rounds;
+  protected volatile int         rounds; // rounds is only visible to one thread
   protected volatile Status      status;
 
   private final long delay;
@@ -26,7 +26,8 @@ class OneShotRegistration<T> extends CompletableFuture<T> implements Registratio
 
   @Override
   public boolean ready() {
-    return status == Status.READY && rounds == 0;
+    // Check for READY here would be redundant, since if it was cancelled it'd be removed before this check
+    return rounds == 0;
   }
 
   @Override
