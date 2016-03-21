@@ -5,7 +5,6 @@ import io.netty.util.TimerTask;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Control;
 
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
