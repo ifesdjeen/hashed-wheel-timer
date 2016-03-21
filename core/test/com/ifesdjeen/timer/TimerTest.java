@@ -89,7 +89,7 @@ public class TimerTest {
                     .get(10, TimeUnit.SECONDS),
                is("Hello"));
     long end = System.currentTimeMillis();
-    assertTrue(end - start > 100);
+    assertTrue(end - start >= 100);
   }
 
   @Test
