@@ -21,10 +21,13 @@
 package com.ifesdjeen.timer;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Hash Wheel Timer, as per the paper:
@@ -42,7 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class HashWheelTimer implements ScheduledExecutorService {
 
-  public static final  int    DEFAULT_RESOLUTION = 100;
+  public static final  int    DEFAULT_RESOLUTION = (int) TimeUnit.NANOSECONDS.convert(10, TimeUnit.MILLISECONDS);
   public static final  int    DEFAULT_WHEEL_SIZE = 512;
   private static final String DEFAULT_TIMER_NAME = "hash-wheel-timer";
 
@@ -56,7 +59,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
   private volatile int cursor = 0;
 
   /**
-   * Create a new {@code HashWheelTimer} using the given with default resolution of 100 NANOSECONDS and
+   * Create a new {@code HashWheelTimer} using the given with default resolution of 10 MILLISECONDS and
    * default wheel size.
    */
   public HashWheelTimer() {
@@ -168,29 +171,34 @@ public class HashWheelTimer implements ScheduledExecutorService {
   public ScheduledFuture<?> schedule(Runnable runnable,
                                      long period,
                                      TimeUnit timeUnit) {
-    return scheduleOneShot(TimeUnit.NANOSECONDS.convert(period, timeUnit), constantlyNull(runnable));
+    return scheduleOneShot(TimeUnit.NANOSECONDS.convert(period, timeUnit),
+                           constantlyNull(runnable));
   }
 
   @Override
   public <V> ScheduledFuture<V> schedule(Callable<V> callable, long period, TimeUnit timeUnit) {
-    return scheduleOneShot(TimeUnit.NANOSECONDS.convert(period, timeUnit), callable);
+    return scheduleOneShot(TimeUnit.NANOSECONDS.convert(period, timeUnit),
+                           callable);
   }
 
   @Override
   public ScheduledFuture<?> scheduleAtFixedRate(Runnable runnable, long initialDelay, long period, TimeUnit unit) {
-    return scheduleFixedRate(TimeUnit.NANOSECONDS.convert(period, unit), initialDelay, constantlyNull(runnable));
+    return scheduleFixedRate(TimeUnit.NANOSECONDS.convert(period, unit),
+                             TimeUnit.NANOSECONDS.convert(initialDelay, unit),
+                             constantlyNull(runnable));
   }
 
   @Override
   public ScheduledFuture<?> scheduleWithFixedDelay(Runnable runnable, long initialDelay, long delay, TimeUnit unit) {
-    return scheduleFixedDelay(TimeUnit.NANOSECONDS.convert(delay, unit), initialDelay, constantlyNull(runnable));
+    return scheduleFixedDelay(TimeUnit.NANOSECONDS.convert(delay, unit),
+                              TimeUnit.NANOSECONDS.convert(initialDelay, unit),
+                              constantlyNull(runnable));
   }
 
   private <V> Registration<V> scheduleOneShot(long firstDelay,
                                               Callable<V> callable) {
     isTrue(firstDelay >= resolution,
            "Cannot schedule tasks for amount of time less than timer precision.");
-    // TODO: check if switching to int gives anything
     int firstFireOffset = (int) firstDelay / resolution;
     int firstFireRounds = firstFireOffset / wheelSize;
 
@@ -333,6 +341,41 @@ public class HashWheelTimer implements ScheduledExecutorService {
   public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout,
                          TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
     return this.executor.invokeAny(tasks, timeout, unit);
+  }
+
+  public Runnable debounce(Runnable delegate) {
+    return new Runnable() {
+      @Override
+      public void run() {
+
+      }
+    };
+  }
+
+  public <T> Consumer<T> debounce(Consumer<T> delegate) {
+    return new Consumer<T>() {
+      @Override
+      public void accept(T t) {
+
+      }
+    };
+  }
+
+  public <T, V> Function<T, Future<V>> debounce(Function<T, V> debounce) {
+    CompletableFuture<V> future = new CompletableFuture<>();
+    Consumer<T> consumer = new Consumer<T>() {
+      @Override
+      public void accept(T t) {
+
+      }
+    };
+    return new Function<T, Future<V>>() {
+      @Override
+      public Future<V> apply(T t) {
+
+        return future;
+      }
+    };
   }
 
   private static Callable<?> constantlyNull(Runnable r) {
