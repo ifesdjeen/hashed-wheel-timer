@@ -20,7 +20,7 @@ public class TimerTest {
   @Before
   public void before() {
     // TODO: run tests on different sequences
-    timer = new HashWheelTimer((int)TimeUnit.NANOSECONDS.convert(10, TimeUnit.MILLISECONDS),
+    timer = new HashWheelTimer((int) TimeUnit.NANOSECONDS.convert(10, TimeUnit.MILLISECONDS),
                                8,
                                new WaitStrategy.BusySpinWait());
   }
@@ -129,8 +129,7 @@ public class TimerTest {
                               TimeUnit.MILLISECONDS);
     assertTrue(latch.await(10, TimeUnit.SECONDS));
     // time difference between the beginning of second tick and end of first one
-    assertTrue(r.get(2) - r.get(1) <= 50);
-    //    assertTrue(r.get(2) - r.get(1) > 100);
+    assertTrue(r.get(2) - r.get(1) <= (50 * 100)); // allow it to wiggle
   }
 
   @Test
@@ -196,4 +195,65 @@ public class TimerTest {
     // timeout.cancel(true);
   }
 
+  @Test
+  public void testScheduleTimeoutShouldRunAfterDelay() throws InterruptedException {
+    final CountDownLatch barrier = new CountDownLatch(1);
+    final Future timeout = timer.schedule(() -> {
+      barrier.countDown();
+    }, 2, TimeUnit.SECONDS);
+    assertTrue(barrier.await(3, TimeUnit.SECONDS));
+    assertTrue("timer should expire", timeout.isDone());
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testTimerShouldThrowExceptionAfterShutdownForNewTimeouts() throws InterruptedException {
+    for (int i = 0; i < 3; i++) {
+      timer.schedule(() -> {
+      }, 10, TimeUnit.MILLISECONDS);
+    }
+
+    timer.shutdown();
+    Thread.sleep(1000L); // sleep for a second
+
+    timer.schedule(() -> {
+      fail("This should not run");
+    }, 1, TimeUnit.SECONDS);
+  }
+
+  @Test
+  public void testTimerOverflowWheelLength() throws InterruptedException {
+    final AtomicInteger counter = new AtomicInteger();
+
+    timer.schedule(new Runnable() {
+      @Override
+      public void run() {
+        counter.incrementAndGet();
+        timer.schedule(this, 1, TimeUnit.SECONDS);
+      }
+    }, 1, TimeUnit.SECONDS);
+    Thread.sleep(3500);
+    assertEquals(3, counter.get());
+  }
+
+  @Test
+  public void testExecutionOnTime() throws InterruptedException {
+    int tickDuration = 200;
+    int timeout = 130;
+    int maxTimeout = 2 * (tickDuration + timeout);
+    final BlockingQueue<Long> queue = new LinkedBlockingQueue<Long>();
+
+    int scheduledTasks = 100000;
+    for (int i = 0; i < scheduledTasks; i++) {
+      final long start = System.nanoTime();
+      timer.schedule(() -> {
+        queue.add(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
+      }, timeout, TimeUnit.MILLISECONDS);
+    }
+
+    for (int i = 0; i < scheduledTasks; i++) {
+      long delay = queue.take();
+      assertTrue("Timeout + " + scheduledTasks + " delay must be " + timeout + " < " + delay + " < " + maxTimeout,
+                 delay >= timeout && delay < maxTimeout);
+    }
+  }
 }
