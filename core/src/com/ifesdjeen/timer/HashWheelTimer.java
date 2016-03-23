@@ -196,13 +196,20 @@ public class HashWheelTimer implements ScheduledExecutorService {
 
   private <V> Registration<V> scheduleOneShot(long firstDelay,
                                               Callable<V> callable) {
+    assertRunning();
     isTrue(firstDelay >= resolution,
            "Cannot schedule tasks for amount of time less than timer precision.");
     int firstFireOffset = (int) (firstDelay / resolution);
     int firstFireRounds = firstFireOffset / wheelSize;
 
     Registration<V> r = new OneShotRegistration<V>(firstFireRounds, callable, firstDelay);
-    wheel[idx(cursor + firstFireOffset)].add(r);
+    // We always add +1 because we'd like to keep to the right boundary of event on execution, not to the left:
+    //
+    // For example:
+    //    |          now          |
+    // res start               next tick
+    // The earliest time we can tick is aligned to the right. Think of it a bit as a `ceil` function.
+    wheel[idx(cursor + firstFireOffset + 1)].add(r);
     return r;
   }
 
@@ -213,6 +220,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
   private <V> Registration<V> scheduleFixedRate(long recurringTimeout,
                                                 long firstDelay,
                                                 Callable<V> callable) {
+    assertRunning();
     isTrue(recurringTimeout >= resolution,
            "Cannot schedule tasks for amount of time less than timer precision.");
 
@@ -223,13 +231,14 @@ public class HashWheelTimer implements ScheduledExecutorService {
     int firstFireRounds = firstFireOffset / wheelSize;
 
     Registration<V> r = new FixedRateRegistration<>(firstFireRounds, callable, recurringTimeout, rounds, offset);
-    wheel[idx(cursor + firstFireOffset)].add(r);
+    wheel[idx(cursor + firstFireOffset + 1)].add(r);
     return r;
   }
 
   private <V> Registration<V> scheduleFixedDelay(long recurringTimeout,
                                                  long firstDelay,
                                                  Callable<V> callable) {
+    assertRunning();
     isTrue(recurringTimeout >= resolution,
            "Cannot schedule tasks for amount of time less than timer precision.");
 
@@ -240,8 +249,8 @@ public class HashWheelTimer implements ScheduledExecutorService {
     int firstFireRounds = firstFireOffset / wheelSize;
 
     Registration<V> r = new FixedDelayRegistration<>(firstFireRounds, callable, recurringTimeout, rounds, offset,
-                                                     this::rescheduleForward);
-    wheel[idx(cursor + firstFireOffset)].add(r);
+                                                     this::reschedule);
+    wheel[idx(cursor + firstFireOffset + 1)].add(r);
     return r;
   }
 
@@ -251,11 +260,6 @@ public class HashWheelTimer implements ScheduledExecutorService {
    * @param registration
    */
   private void reschedule(Registration<?> registration) {
-    registration.reset();
-    wheel[idx(cursor + registration.getOffset())].add(registration);
-  }
-
-  private void rescheduleForward(Registration<?> registration) {
     registration.reset();
     wheel[idx(cursor + registration.getOffset() + 1)].add(registration);
   }
@@ -276,8 +280,12 @@ public class HashWheelTimer implements ScheduledExecutorService {
     executor.execute(command);
   }
 
-
-  public static void isTrue(boolean expression, String message) {
+  private void assertRunning() {
+    if (this.loop.isTerminated()) {
+      throw new IllegalStateException("Timer is not running");
+    }
+  }
+  private static void isTrue(boolean expression, String message) {
     if (!expression) {
       throw new IllegalArgumentException(message);
     }
