@@ -6,16 +6,12 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class TimerTest {
 
@@ -184,4 +180,20 @@ public class TimerTest {
 
   // TODO: precision test
   // capture deadline and check the deviation from the deadline for different amounts of tasks
+
+  // DISCLAIMER:
+  // THE FOLLOWING TESTS WERE PORTED FROM NETTY. BIG PROPS TO NETTY AUTHORS FOR THEM.
+
+  @Test
+  public void testScheduleTimeoutShouldNotRunBeforeDelay() throws InterruptedException {
+    final CountDownLatch barrier = new CountDownLatch(1);
+    final Future timeout = timer.schedule(() -> {
+      fail("This should not have run");
+      barrier.countDown();
+    }, 10, TimeUnit.SECONDS);
+    assertFalse(barrier.await(3, TimeUnit.SECONDS));
+    assertFalse("timer should not expire", timeout.isDone());
+    // timeout.cancel(true);
+  }
+
 }
