@@ -21,7 +21,6 @@
 package com.ifesdjeen.timer;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
@@ -45,13 +44,13 @@ import java.util.function.Function;
  */
 public class HashWheelTimer implements ScheduledExecutorService {
 
-  public static final  int    DEFAULT_RESOLUTION = (int) TimeUnit.NANOSECONDS.convert(10, TimeUnit.MILLISECONDS);
+  public static final  long   DEFAULT_RESOLUTION = TimeUnit.NANOSECONDS.convert(10, TimeUnit.MILLISECONDS);
   public static final  int    DEFAULT_WHEEL_SIZE = 512;
   private static final String DEFAULT_TIMER_NAME = "hash-wheel-timer";
 
   private final Set<Registration<?>>[] wheel;
   private final int                    wheelSize;
-  private final int                    resolution;
+  private final long                   resolution;
   private final ExecutorService        loop;
   private final ExecutorService        executor;
   private final WaitStrategy           waitStrategy;
@@ -72,7 +71,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
    *
    * @param resolution the resolution of this timer, in NANOSECONDS
    */
-  public HashWheelTimer(int resolution) {
+  public HashWheelTimer(long resolution) {
     this(resolution, DEFAULT_WHEEL_SIZE, new WaitStrategy.SleepWait());
   }
 
@@ -85,7 +84,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
    *                     for sparse timeouts. Sane default is 512.
    * @param waitStrategy strategy for waiting for the next tick
    */
-  public HashWheelTimer(int res, int wheelSize, WaitStrategy waitStrategy) {
+  public HashWheelTimer(long res, int wheelSize, WaitStrategy waitStrategy) {
     this(DEFAULT_TIMER_NAME, res, wheelSize, waitStrategy, Executors.newFixedThreadPool(1));
   }
 
@@ -100,7 +99,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
    * @param strategy  strategy for waiting for the next tick
    * @param exec      Executor instance to submit tasks to
    */
-  public HashWheelTimer(String name, int res, int wheelSize, WaitStrategy strategy, ExecutorService exec) {
+  public HashWheelTimer(String name, long res, int wheelSize, WaitStrategy strategy, ExecutorService exec) {
     this.waitStrategy = strategy;
 
     this.wheel = new Set[wheelSize];
@@ -199,7 +198,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
                                               Callable<V> callable) {
     isTrue(firstDelay >= resolution,
            "Cannot schedule tasks for amount of time less than timer precision.");
-    int firstFireOffset = (int) firstDelay / resolution;
+    int firstFireOffset = (int) (firstDelay / resolution);
     int firstFireRounds = firstFireOffset / wheelSize;
 
     Registration<V> r = new OneShotRegistration<V>(firstFireRounds, callable, firstDelay);
@@ -217,10 +216,10 @@ public class HashWheelTimer implements ScheduledExecutorService {
     isTrue(recurringTimeout >= resolution,
            "Cannot schedule tasks for amount of time less than timer precision.");
 
-    int offset = (int) recurringTimeout / resolution;
+    int offset = (int) (recurringTimeout / resolution);
     int rounds = offset / wheelSize;
 
-    int firstFireOffset = (int) firstDelay / resolution;
+    int firstFireOffset = (int) (firstDelay / resolution);
     int firstFireRounds = firstFireOffset / wheelSize;
 
     Registration<V> r = new FixedRateRegistration<>(firstFireRounds, callable, recurringTimeout, rounds, offset);
@@ -234,10 +233,10 @@ public class HashWheelTimer implements ScheduledExecutorService {
     isTrue(recurringTimeout >= resolution,
            "Cannot schedule tasks for amount of time less than timer precision.");
 
-    int offset = (int) recurringTimeout / resolution;
+    int offset = (int) (recurringTimeout / resolution);
     int rounds = offset / wheelSize;
 
-    int firstFireOffset = (int) firstDelay / resolution;
+    int firstFireOffset = (int) (firstDelay / resolution);
     int firstFireRounds = firstFireOffset / wheelSize;
 
     Registration<V> r = new FixedDelayRegistration<>(firstFireRounds, callable, recurringTimeout, rounds, offset,
