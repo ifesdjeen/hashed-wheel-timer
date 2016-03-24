@@ -1,8 +1,11 @@
 # Ticky Tacky
 
 > Little boxes on the hillside,
+>
 > Little boxes made of ticky tacky,
+>
 > Little boxes on the hillside,
+>
 > Little boxes all the same
 > - Malvina Meynolds
 
@@ -31,6 +34,34 @@ This implementation was contributed to Reactor in [2014](https://github.com/reac
 and now is extracted and adopted to be used as a standalone library with benchmarks,
 `debounce`, `throttle` implementations, `ScheduledExecutorService` impl and
 other bells and whistles.
+
+# nanoTime
+
+Internally, this library is using `nanoTime`, since it's a system timer (exactly
+what the library needs) best used for measuring elapsed time, exactly as JDK documentation
+states. One of the places to read about `nanoTime` is [here](http://shipilev.net/blog/2014/nanotrusting-nanotime/).
+
+# Waiting Strategies
+
+Timer Wheel allows you to pick between the three wait strategies: `BusySpin` (most resource-
+consuming), although resulting into the best precision. Timer loop will never release control,
+and will spin forever waiting for new tasks. `Yielding` strategy is some kind of a compromise,
+which yields control after checking whether the deadline was reached or no. `Sleeping` strategy
+is injecting a `Thread.sleep()` until the deadline. Moving from "system" timer usually means
+you don't want to use `sleep` at all. Except maybe for testing.
+
+# Usage
+
+Library implements `ScheduledExecutorService`. The decision was made to implement this
+interface instead of `Timer`, since what the library does has more to do with scheduled
+executor service than.
+
+# `debounce` and `throttle`
+
+For convenience, library also provides [debounce](http://rxmarbles.com/#debounce) and throttle for `Runnable`,
+`Consumer` and `BiConsumer`, which allow you to wrap any runnable or consumer into
+their debounced or throttled version. You can find more information about debouncing
+and throttling by following the links above.
 
 # Comparison with JDK ScheduledExecutorService
 

@@ -17,6 +17,7 @@
   </licenses>
 
   <properties>
+    <self.version>0.0.1-SNAPSHOT</self.version>
     <javac.target>1.8</javac.target>
     <jmh.version>1.11.3</jmh.version>
     <fusion.version>0.0.1-SNAPSHOT</fusion.version>
