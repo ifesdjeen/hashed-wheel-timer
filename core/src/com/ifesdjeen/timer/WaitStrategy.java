@@ -1,12 +1,13 @@
 package com.ifesdjeen.timer;
 
 public interface WaitStrategy {
+
   /**
-   * Wait until the given deadline, {@data deadlineMilliseconds}
+   * Wait until the given deadline, {@data deadlineNanoseconds}
    *
-   * @param deadlineMilliseconds deadline to wait for, in milliseconds
+   * @param deadlineNanoseconds deadline to wait for, in milliseconds
    */
-  public void waitUntil(long deadlineMilliseconds) throws InterruptedException;
+  public void waitUntil(long deadlineNanoseconds) throws InterruptedException;
 
   /**
    * Yielding wait strategy.
@@ -18,8 +19,8 @@ public interface WaitStrategy {
   public static class YieldingWait implements WaitStrategy {
 
     @Override
-    public void waitUntil(long deadlineMilliseconds) throws InterruptedException {
-      while (deadlineMilliseconds >= System.currentTimeMillis()) {
+    public void waitUntil(long deadline) throws InterruptedException {
+      while (deadline >= System.nanoTime()) {
         Thread.yield();
         if (Thread.currentThread().isInterrupted()) {
           throw new InterruptedException();
@@ -38,8 +39,8 @@ public interface WaitStrategy {
   public static class BusySpinWait implements WaitStrategy {
 
     @Override
-    public void waitUntil(long deadlineNanoseconds) throws InterruptedException {
-      while (deadlineNanoseconds >= System.nanoTime()) {
+    public void waitUntil(long deadline) throws InterruptedException {
+      while (deadline >= System.nanoTime()) {
         if (Thread.currentThread().isInterrupted()) {
           throw new InterruptedException();
         }
@@ -57,8 +58,8 @@ public interface WaitStrategy {
   public static class SleepWait implements WaitStrategy {
 
     @Override
-    public void waitUntil(long deadlineMilliseconds) throws InterruptedException {
-      long sleepTimeMs = deadlineMilliseconds - System.currentTimeMillis();
+    public void waitUntil(long deadline) throws InterruptedException {
+      long sleepTimeMs = deadline - System.nanoTime();
       if (sleepTimeMs > 0) {
         Thread.sleep(sleepTimeMs);
       }
