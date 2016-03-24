@@ -99,6 +99,17 @@ All benchmarks can be found [here](https://github.com/ifesdjeen/hashed-wheel-tim
 If you think the benchmarks are suboptimal, incomplete, unrealistic or biased, just
 fire an issue. It's always good to learn something new.
 
+## Artifact
+
+```xml
+<dependency>
+  <groupId>com.github.ifesdjeen</groupId>
+  <artifactId>hashed-wheel-timer-parent</artifactId>
+  <version>1.0.0-RC1</version>
+  <type>pom</type>
+</dependency>
+```
+
 ## License
 
 Copyright © 2016 Alex P
