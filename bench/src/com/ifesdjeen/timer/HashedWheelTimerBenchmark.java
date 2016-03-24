@@ -6,7 +6,7 @@ import org.openjdk.jmh.annotations.TearDown;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-public class HashWheelTimerBenchmark extends AbstractBenchmark {
+public class HashedWheelTimerBenchmark extends AbstractBenchmark {
 
   @Setup
   public void setup() {

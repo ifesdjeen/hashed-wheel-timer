@@ -59,7 +59,7 @@ public class HashedWheelTimer implements ScheduledExecutorService {
   private volatile int cursor = 0;
 
   /**
-   * Create a new {@code HashWheelTimer} using the given with default resolution of 10 MILLISECONDS and
+   * Create a new {@code HashedWheelTimer} using the given with default resolution of 10 MILLISECONDS and
    * default wheel size.
    */
   public HashedWheelTimer() {
@@ -67,7 +67,7 @@ public class HashedWheelTimer implements ScheduledExecutorService {
   }
 
   /**
-   * Create a new {@code HashWheelTimer} using the given timer resolution. All times will rounded up to the closest
+   * Create a new {@code HashedWheelTimer} using the given timer resolution. All times will rounded up to the closest
    * multiple of this resolution.
    *
    * @param resolution the resolution of this timer, in NANOSECONDS
@@ -77,7 +77,7 @@ public class HashedWheelTimer implements ScheduledExecutorService {
   }
 
   /**
-   * Create a new {@code HashWheelTimer} using the given timer {@data resolution} and {@data wheelSize}. All times will
+   * Create a new {@code HashedWheelTimer} using the given timer {@data resolution} and {@data wheelSize}. All times will
    * rounded up to the closest multiple of this resolution.
    *
    * @param res          resolution of this timer in NANOSECONDS
@@ -90,7 +90,7 @@ public class HashedWheelTimer implements ScheduledExecutorService {
   }
 
   /**
-   * Create a new {@code HashWheelTimer} using the given timer {@data resolution} and {@data wheelSize}. All times will
+   * Create a new {@code HashedWheelTimer} using the given timer {@data resolution} and {@data wheelSize}. All times will
    * rounded up to the closest multiple of this resolution.
    *
    * @param name      name for daemon thread factory to be displayed
@@ -267,7 +267,7 @@ public class HashedWheelTimer implements ScheduledExecutorService {
 
   @Override
   public String toString() {
-    return String.format("HashWheelTimer { Buffer Size: %d, Resolution: %d }",
+    return String.format("HashedWheelTimer { Buffer Size: %d, Resolution: %d }",
                          wheelSize,
                          resolution);
   }
