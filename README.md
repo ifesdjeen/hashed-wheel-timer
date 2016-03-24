@@ -19,10 +19,24 @@ of events on given resolution, an array of linked lists (alternatively - sets or
 arrays, YMMV) is preallocated. When event is scheduled, it's address is found by
 dividing deadline time `t` by `resolution` and `wheel size`.
 
+It is often called __approximated timer__, since it acts on the certain resolution, which
+allows optimisation. All the tasks scheduled for the timer period lower than the resolution
+or "between" resolution steps will be rounded to the "ceiling" (for example, given resolution
+10 milliseconds, all the tasks for 5,6,7 etc milliseconds will first fire after 10, and
+15, 16, 17 will first trigger after 20).
+
 This implementation was contributed to Reactor in [2014](https://github.com/reactor/reactor/commit/53c0dcfab40b91838694843729c85c2effe7272b),
 and now is extracted and adopted to be used as a standalone library with benchmarks,
 `debounce`, `throttle` implementations, `ScheduledExecutorService` impl and
-other bells and whistles.
+other bells and whistles. For __buckets__, `ConcurrentHashSet` is used (this, however,
+does not have any influence on the cancellation performance, it is still `O(1)` as
+cancellation is handled during bucket iteration). Switching to the array didn't bring
+change performance / throughput at all (however, reduced the memory footprint). Array
+implementation is however harder to get right, as one would have to allow multiple
+strategies for growth and shrinking of the underlying array.
+
+Advancement would be to implement a hierarchical wheels, which would be quite simple
+on top of this library.
 
 # nanoTime
 
