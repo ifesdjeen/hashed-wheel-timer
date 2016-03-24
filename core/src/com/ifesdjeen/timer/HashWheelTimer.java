@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -285,6 +286,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
       throw new IllegalStateException("Timer is not running");
     }
   }
+
   private static void isTrue(boolean expression, String message) {
     if (!expression) {
       throw new IllegalArgumentException(message);
@@ -359,11 +361,25 @@ public class HashWheelTimer implements ScheduledExecutorService {
     };
   }
 
-  public <T> Consumer<T> debounce(Consumer<T> delegate) {
+  public <T> Consumer<T> debounce(Consumer<T> delegate,
+                                  long period,
+                                  TimeUnit timeUnit) {
+    AtomicReference<ScheduledFuture<T>> reg = new AtomicReference<>();
+
     return new Consumer<T>() {
       @Override
       public void accept(T t) {
-
+        ScheduledFuture<T> future = reg.getAndSet(scheduleOneShot(TimeUnit.NANOSECONDS.convert(period, timeUnit),
+                                                                  new Callable<T>() {
+                                                                    @Override
+                                                                    public T call() throws Exception {
+                                                                      delegate.accept(t);
+                                                                      return t;
+                                                                    }
+                                                                  }));
+        if (future != null) {
+          future.cancel(true);
+        }
       }
     };
   }

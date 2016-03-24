@@ -256,4 +256,13 @@ public class TimerTest {
                  delay >= timeout && delay < maxTimeout);
     }
   }
+  @Test
+  public void multiCompleteFuture() throws InterruptedException, TimeoutException, ExecutionException {
+    CompletableFuture<String> f = new CompletableFuture<>();
+    f.complete("a");
+    f.complete("b");
+    f.complete("c");
+    System.out.println(f.get(10, TimeUnit.SECONDS));
+
+  }
 }
