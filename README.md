@@ -1,15 +1,4 @@
-# Ticky Tacky
-
-> Little boxes on the hillside,
->
-> Little boxes made of ticky tacky,
->
-> Little boxes on the hillside,
->
-> Little boxes all the same
-> - Malvina Meynolds
-
-# What is the Timer Wheel?
+# What is the Hashed Timer?
 
 Hashed and Hierarchical Wheels were used as a base for Kernels and Network stacks, and
 were described by the [freebsd](http://people.freebsd.org/~davide/asia/callout_paper.pdf),
