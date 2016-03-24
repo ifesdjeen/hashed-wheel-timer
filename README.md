@@ -19,6 +19,13 @@ of events on given resolution, an array of linked lists (alternatively - sets or
 arrays, YMMV) is preallocated. When event is scheduled, it's address is found by
 dividing deadline time `t` by `resolution` and `wheel size`.
 
+For each scheduled resolution, a __bucket__ is created. There are `wheel size` buckets,
+each one of which is holding `Registrations`. Registration is keeping the number of `rounds`,
+after which the timeout is going to be triggered. Timer is going through each `bucket` from
+the first until the next one, and decrements `rounds` for each `Registration`. As soon
+as `Registration` is reaching 0, it is either rescheduled (with same offset and amount of rounds
+as initially) or removed from timer.
+
 It is often called __approximated timer__, since it acts on the certain resolution, which
 allows optimisation. All the tasks scheduled for the timer period lower than the resolution
 or "between" resolution steps will be rounded to the "ceiling" (for example, given resolution
