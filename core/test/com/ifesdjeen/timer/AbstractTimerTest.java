@@ -4,28 +4,30 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.lang.ref.Reference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.*;
 
-public class TimerTest {
+public abstract class AbstractTimerTest {
 
   HashWheelTimer timer;
+
+  public abstract WaitStrategy waitStrategy();
 
   @Before
   public void before() {
     // TODO: run tests on different sequences
     timer = new HashWheelTimer((int) TimeUnit.NANOSECONDS.convert(10, TimeUnit.MILLISECONDS),
                                8,
-                               new WaitStrategy.BusySpinWait());
+                               waitStrategy());
   }
 
   @After
@@ -283,15 +285,27 @@ public class TimerTest {
       Thread.sleep(100);
       debounced.accept("g'suffa");
 
+      assertThat(ref.get(), is("wat"));
       assertTrue(waitFor(ref, "g'suffa", 10, TimeUnit.SECONDS));
+      Thread.sleep(1000);
+      assertThat(ref.get(), is("g'suffa"));
       long end = System.currentTimeMillis();
 
       assertTrue(end - start >= 700);
     }
   }
 
+  private boolean waitFor(Supplier<Boolean> condition,
+                          long timeout, TimeUnit timeUnit) throws InterruptedException {
+    long deadline = System.currentTimeMillis() + timeUnit.toMillis(timeout);
+    while (!condition.get() && System.currentTimeMillis() < deadline) {
+      Thread.sleep(1);
+    }
+    return condition.get();
+  }
+
   private <T> boolean waitFor(AtomicReference<T> v, T expected,
-                           long timeout, TimeUnit timeUnit) throws InterruptedException {
+                              long timeout, TimeUnit timeUnit) throws InterruptedException {
     long deadline = System.currentTimeMillis() + timeUnit.toMillis(timeout);
     while (!expected.equals(v.get()) && System.currentTimeMillis() < deadline) {
       Thread.sleep(1);
@@ -320,12 +334,96 @@ public class TimerTest {
   }
 
   @Test
-  public void multiCompleteFuture() throws InterruptedException, TimeoutException, ExecutionException {
-    CompletableFuture<String> f = new CompletableFuture<>();
-    f.complete("a");
-    f.complete("b");
-    f.complete("c");
-    System.out.println(f.get(10, TimeUnit.SECONDS));
+  public void runnableDebounceTest() throws InterruptedException {
+    AtomicInteger ref = new AtomicInteger(0);
 
+    Runnable debounced = timer.debounce(() -> {
+      ref.incrementAndGet();
+    }, 500, TimeUnit.MILLISECONDS);
+
+    for (int i = 0; i < 3; i++) {
+      ref.set(0);
+      long start = System.currentTimeMillis();
+      debounced.run();
+      Thread.sleep(100);
+      debounced.run();
+      Thread.sleep(100);
+      debounced.run();
+
+      assertThat(ref.get(), is(0)); // isn't set immediately
+      assertTrue(waitFor(() -> ref.get() == 1, 10, TimeUnit.SECONDS));
+      assertThat(ref.get(), is(1)); // set after debounce
+      long end = System.currentTimeMillis();
+      long diff = end - start;
+      assertTrue(diff >= 700 && diff <= 800);
+
+      Thread.sleep(1000);
+      assertThat(ref.get(), is(1)); // not changed after that
+    }
+  }
+
+  // throttle test
+
+  @Test
+  public void throttleTest() throws InterruptedException {
+    AtomicInteger ref = new AtomicInteger(0);
+
+    Runnable throttled = timer.throttle(ref::incrementAndGet,
+                                        500, TimeUnit.MILLISECONDS);
+
+    for (int i = 0; i < 3; i++) {
+      ref.set(0);
+      long start = System.currentTimeMillis();
+      throttled.run();
+      Thread.sleep(100);
+      throttled.run();
+      Thread.sleep(100);
+      throttled.run();
+
+      assertThat(ref.get(), is(0));
+
+      assertTrue(waitFor(() -> ref.get() == 1, 10, TimeUnit.SECONDS));
+      long end = System.currentTimeMillis();
+      long diff = end - start;
+      assertTrue(diff >= 500 && diff <= 600); // wiggle
+
+      assertThat(ref.get(), is(1));
+      Thread.sleep(1000);
+      assertThat(ref.get(), is(1));
+    }
+  }
+
+  @Test
+  public void throttleConsumerTest() throws InterruptedException {
+    AtomicInteger ref = new AtomicInteger(0);
+
+    Consumer<Integer> throttled = timer.throttle(new Consumer<Integer>() {
+                                          @Override
+                                          public void accept(Integer t) {
+                                            ref.addAndGet(t);
+                                          }
+                                        },
+                                        500, TimeUnit.MILLISECONDS);
+
+    for (int i = 0; i < 3; i++) {
+      ref.set(0);
+      long start = System.currentTimeMillis();
+      throttled.accept(3);
+      Thread.sleep(100);
+      throttled.accept(5);
+      Thread.sleep(100);
+      throttled.accept(7);
+
+      assertThat(ref.get(), is(0));
+
+      assertTrue(waitFor(() -> ref.get() == 7, 10, TimeUnit.SECONDS));
+      long end = System.currentTimeMillis();
+      long diff = end - start;
+      assertTrue(diff >= 500 && diff <= 600); // wiggle
+
+      assertThat(ref.get(), is(7));
+      Thread.sleep(1000);
+      assertThat(ref.get(), is(7));
+    }
   }
 }
