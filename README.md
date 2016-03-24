@@ -15,7 +15,7 @@ and many others. Of course, every implementation is adapted for the needs of the
 framework.
 
 The concept on the Timer Wheel is rather simple to understand: in order to keep track
-of events on given resolution, an array of linked lists (alternatively - sets or even
+of events on given resolution, an array of linked lists called bucket (alternatively - sets or even
 arrays, YMMV) is preallocated. When event is scheduled, it's address is found by
 dividing deadline time `t` by `resolution` and `wheel size`.
 
