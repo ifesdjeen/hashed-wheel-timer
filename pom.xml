@@ -12,8 +12,9 @@
 
   <licenses>
     <license>
-      <name>Copyright Alex Petrov</name>
-    </license>
+      <name>Eclipse Public License</name>
+      <url>https://opensource.org/licenses/EPL-1.0</url>
+    </license>license>
   </licenses>
 
   <properties>
@@ -80,6 +81,24 @@
       </plugin>
     </plugins>
   </build>
+
+  <distributionManagement>
+    <snapshotRepository>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+    <repository>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+  </distributionManagement>
+
+  <scm>
+    <connection>scm:git:git@github.com:ifesdjeen/hash-wheel-timer.git</connection>
+    <developerConnection>scm:git:git@github.com:ifesdjeen/hash-wheel-timer.git</developerConnection>
+    <url>git@github.com:ifesdjeen/hash-wheel-timer.git</url>
+    <tag>HEAD</tag>
+  </scm>
 
   <modules>
     <module>core</module>
