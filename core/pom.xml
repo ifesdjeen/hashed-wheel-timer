@@ -7,12 +7,13 @@
 
   <parent>
     <groupId>com.ifesdjeen</groupId>
-    <version>0.0.1-SNAPSHOT</version>
     <artifactId>hash-wheel-timer-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
   </parent>
 
   <name>Hash Wheel Timer</name>
   <artifactId>hash-wheel-timer-core</artifactId>
+
 
   <dependencies>
     <dependency>
