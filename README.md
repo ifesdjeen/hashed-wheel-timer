@@ -72,12 +72,12 @@ The following charts show the performance of JDK `ScheduledExecutorService` (vio
 vs `HashWheelTimer` (black). The X is the amount of tasks submitted sequentially,
 the Y axis is the latency until all the tasks were executed.
 
-![Single Timer Benchmark](https://raw.githubusercontent.com/ifesdjeen/hash-wheel-timer/master/doc/images/single_timer.png)
+![Single Timer Benchmark](https://raw.githubusercontent.com/ifesdjeen/hashed-wheel-timer/master/doc/images/single_timer.png)
 
 In the following chart, the Y axis is amount of tasks submitted sequentially, although
 from 10 threads, where each next thread is starting with 10 millisecond delay.
 
-![Multi Timer Benchmark](https://raw.githubusercontent.com/ifesdjeen/hash-wheel-timer/master/doc/images/multi_timer.png)
+![Multi Timer Benchmark](https://raw.githubusercontent.com/ifesdjeen/hashed-wheel-timer/master/doc/images/multi_timer.png)
 
 In both cases, 8 threads are used for workers. Changing amount of threads, hash wheel
 size, adding more events to benchmarks doesn't significantly change the picture.
@@ -85,7 +85,7 @@ size, adding more events to benchmarks doesn't significantly change the picture.
 You can see that HashWheelTimer generally gives a flatter curve, which means that given
 many fired events, it's precision is going to be better.
 
-All benchmarks can be found [here](https://github.com/ifesdjeen/hash-wheel-timer/tree/master/bench).
+All benchmarks can be found [here](https://github.com/ifesdjeen/hashed-wheel-timer/tree/master/bench).
 If you think the benchmarks are suboptimal, incomplete, unrealistic or biased, just
 fire an issue. It's always good to learn something new.
 

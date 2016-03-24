@@ -43,11 +43,11 @@ import java.util.function.Consumer;
  *
  * @author Oleksandr Petrov
  */
-public class HashWheelTimer implements ScheduledExecutorService {
+public class HashedWheelTimer implements ScheduledExecutorService {
 
   public static final  long   DEFAULT_RESOLUTION = TimeUnit.NANOSECONDS.convert(10, TimeUnit.MILLISECONDS);
   public static final  int    DEFAULT_WHEEL_SIZE = 512;
-  private static final String DEFAULT_TIMER_NAME = "hash-wheel-timer";
+  private static final String DEFAULT_TIMER_NAME = "hashed-wheel-timer";
 
   private final Set<Registration<?>>[] wheel;
   private final int                    wheelSize;
@@ -62,7 +62,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
    * Create a new {@code HashWheelTimer} using the given with default resolution of 10 MILLISECONDS and
    * default wheel size.
    */
-  public HashWheelTimer() {
+  public HashedWheelTimer() {
     this(DEFAULT_RESOLUTION, DEFAULT_WHEEL_SIZE, new WaitStrategy.SleepWait());
   }
 
@@ -72,7 +72,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
    *
    * @param resolution the resolution of this timer, in NANOSECONDS
    */
-  public HashWheelTimer(long resolution) {
+  public HashedWheelTimer(long resolution) {
     this(resolution, DEFAULT_WHEEL_SIZE, new WaitStrategy.SleepWait());
   }
 
@@ -85,7 +85,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
    *                     for sparse timeouts. Sane default is 512.
    * @param waitStrategy strategy for waiting for the next tick
    */
-  public HashWheelTimer(long res, int wheelSize, WaitStrategy waitStrategy) {
+  public HashedWheelTimer(long res, int wheelSize, WaitStrategy waitStrategy) {
     this(DEFAULT_TIMER_NAME, res, wheelSize, waitStrategy, Executors.newFixedThreadPool(1));
   }
 
@@ -100,7 +100,7 @@ public class HashWheelTimer implements ScheduledExecutorService {
    * @param strategy  strategy for waiting for the next tick
    * @param exec      Executor instance to submit tasks to
    */
-  public HashWheelTimer(String name, long res, int wheelSize, WaitStrategy strategy, ExecutorService exec) {
+  public HashedWheelTimer(String name, long res, int wheelSize, WaitStrategy strategy, ExecutorService exec) {
     this.waitStrategy = strategy;
 
     this.wheel = new Set[wheelSize];
@@ -456,4 +456,3 @@ public class HashWheelTimer implements ScheduledExecutorService {
   }
 
 }
-

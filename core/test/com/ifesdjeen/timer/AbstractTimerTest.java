@@ -18,16 +18,16 @@ import static org.junit.Assert.*;
 
 public abstract class AbstractTimerTest {
 
-  HashWheelTimer timer;
+  HashedWheelTimer timer;
 
   public abstract WaitStrategy waitStrategy();
 
   @Before
   public void before() {
     // TODO: run tests on different sequences
-    timer = new HashWheelTimer((int) TimeUnit.NANOSECONDS.convert(10, TimeUnit.MILLISECONDS),
-                               8,
-                               waitStrategy());
+    timer = new HashedWheelTimer((int) TimeUnit.NANOSECONDS.convert(10, TimeUnit.MILLISECONDS),
+                                 8,
+                                 waitStrategy());
   }
 
   @After

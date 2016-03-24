@@ -6,13 +6,13 @@
   <packaging>jar</packaging>
 
   <parent>
-    <groupId>com.ifesdjeen</groupId>
-    <artifactId>hash-wheel-timer-parent</artifactId>
+    <groupId>com.github.ifesdjeen</groupId>
+    <artifactId>hashed-wheel-timer-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
   </parent>
 
   <name>Hash Wheel Timer</name>
-  <artifactId>hash-wheel-timer-core</artifactId>
+  <artifactId>hashed-wheel-timer-core</artifactId>
 
 
   <dependencies>

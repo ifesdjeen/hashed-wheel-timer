@@ -6,12 +6,12 @@
   <packaging>jar</packaging>
 
   <parent>
-    <groupId>com.ifesdjeen</groupId>
-    <artifactId>hash-wheel-timer-parent</artifactId>
+    <groupId>com.github.ifesdjeen</groupId>
+    <artifactId>hashed-wheel-timer-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
   </parent>
 
-  <artifactId>hash-wheel-timer-bench</artifactId>
+  <artifactId>hashed-wheel-timer-bench</artifactId>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -20,8 +20,8 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.ifesdjeen</groupId>
-      <artifactId>hash-wheel-timer-core</artifactId>
+      <groupId>com.github.ifesdjeen</groupId>
+      <artifactId>hashed-wheel-timer-core</artifactId>
       <version>${self.version}</version>
     </dependency>
     <dependency>

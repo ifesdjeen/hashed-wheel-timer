@@ -10,11 +10,11 @@ public class HashWheelTimerBenchmark extends AbstractBenchmark {
 
   @Setup
   public void setup() {
-    timer = new HashWheelTimer("hash-wheel-timer",
-                               (int) TimeUnit.NANOSECONDS.convert(10, TimeUnit.MILLISECONDS),
-                               1024,
-                               new WaitStrategy.BusySpinWait(),
-                               Executors.newFixedThreadPool(8));
+    timer = new HashedWheelTimer("hashed-wheel-timer",
+                                 (int) TimeUnit.NANOSECONDS.convert(10, TimeUnit.MILLISECONDS),
+                                 1024,
+                                 new WaitStrategy.BusySpinWait(),
+                                 Executors.newFixedThreadPool(8));
   }
 
   @TearDown
