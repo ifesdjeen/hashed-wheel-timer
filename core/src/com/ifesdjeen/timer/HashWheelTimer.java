@@ -24,10 +24,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
  * Hash Wheel Timer, as per the paper:
@@ -352,11 +352,25 @@ public class HashWheelTimer implements ScheduledExecutorService {
     return this.executor.invokeAny(tasks, timeout, unit);
   }
 
-  public Runnable debounce(Runnable delegate) {
+  public Runnable debounce(Runnable delegate,
+                           long period,
+                           TimeUnit timeUnit) {
+    AtomicReference<ScheduledFuture<?>> reg = new AtomicReference<>();
+
     return new Runnable() {
       @Override
       public void run() {
-
+        ScheduledFuture<?> future = reg.getAndSet(scheduleOneShot(TimeUnit.NANOSECONDS.convert(period, timeUnit),
+                                                                  new Callable<Object>() {
+                                                                    @Override
+                                                                    public Object call() throws Exception {
+                                                                      delegate.run();
+                                                                      return null;
+                                                                    }
+                                                                  }));
+        if (future != null) {
+          future.cancel(true);
+        }
       }
     };
   }
@@ -384,22 +398,55 @@ public class HashWheelTimer implements ScheduledExecutorService {
     };
   }
 
-  public <T, V> Function<T, Future<V>> debounce(Function<T, V> debounce) {
-    CompletableFuture<V> future = new CompletableFuture<>();
-    Consumer<T> consumer = new Consumer<T>() {
-      @Override
-      public void accept(T t) {
+  public Runnable throttle(Runnable delegate,
+                           long period,
+                           TimeUnit timeUnit) {
+    AtomicBoolean alreadyWaiting = new AtomicBoolean();
 
-      }
-    };
-    return new Function<T, Future<V>>() {
+    return new Runnable() {
       @Override
-      public Future<V> apply(T t) {
-
-        return future;
+      public void run() {
+        if (alreadyWaiting.compareAndSet(false, true)) {
+          scheduleOneShot(TimeUnit.NANOSECONDS.convert(period, timeUnit),
+                          new Callable<Object>() {
+                            @Override
+                            public Object call() throws Exception {
+                              delegate.run();
+                              alreadyWaiting.compareAndSet(true, false);
+                              return null;
+                            }
+                          });
+        }
       }
     };
   }
+
+  public <T> Consumer<T> throttle(Consumer<T> delegate,
+                                  long period,
+                                  TimeUnit timeUnit) {
+    AtomicBoolean alreadyWaiting = new AtomicBoolean();
+    AtomicReference<T> lastValue = new AtomicReference<>();
+
+    return new Consumer<T>() {
+      @Override
+      public void accept(T val) {
+        lastValue.set(val);
+        if (alreadyWaiting.compareAndSet(false, true)) {
+          scheduleOneShot(TimeUnit.NANOSECONDS.convert(period, timeUnit),
+                          new Callable<Object>() {
+                            @Override
+                            public Object call() throws Exception {
+                              delegate.accept(lastValue.getAndSet(null));
+                              alreadyWaiting.compareAndSet(true, false);
+                              return null;
+                            }
+                          });
+        }
+      }
+    };
+  }
+
+  // TODO: biConsumer
 
   private static Callable<?> constantlyNull(Runnable r) {
     return () -> {
