@@ -4,10 +4,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.ref.Reference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
@@ -256,6 +259,66 @@ public class TimerTest {
                  delay >= timeout && delay < maxTimeout);
     }
   }
+
+  // Debounce tests
+
+  @Test
+  public void debounceTest() throws InterruptedException {
+    AtomicReference ref = new AtomicReference(null);
+
+    Consumer<String> debounced = timer.debounce(new Consumer<String>() {
+      @Override
+      public void accept(String s) {
+        ref.set(s);
+        assertThat(s, is("g'suffa"));
+      }
+    }, 500, TimeUnit.MILLISECONDS);
+
+    for (int i = 0; i < 3; i++) {
+      ref.set("wat");
+      long start = System.currentTimeMillis();
+      debounced.accept("oanz");
+      Thread.sleep(100);
+      debounced.accept("zwoa");
+      Thread.sleep(100);
+      debounced.accept("g'suffa");
+
+      assertTrue(waitFor(ref, "g'suffa", 10, TimeUnit.SECONDS));
+      long end = System.currentTimeMillis();
+
+      assertTrue(end - start >= 700);
+    }
+  }
+
+  private <T> boolean waitFor(AtomicReference<T> v, T expected,
+                           long timeout, TimeUnit timeUnit) throws InterruptedException {
+    long deadline = System.currentTimeMillis() + timeUnit.toMillis(timeout);
+    while (!expected.equals(v.get()) && System.currentTimeMillis() < deadline) {
+      Thread.sleep(1);
+    }
+    return expected.equals(v.get());
+  }
+
+  @Test
+  public void singleDebounceTest() throws InterruptedException {
+    CountDownLatch latch = new CountDownLatch(1);
+    Consumer<String> debounced = timer.debounce(new Consumer<String>() {
+      @Override
+      public void accept(String s) {
+        latch.countDown();
+        assertThat(s, is("oanz"));
+      }
+    }, 500, TimeUnit.MILLISECONDS);
+
+    long start = System.currentTimeMillis();
+    debounced.accept("oanz");
+
+    assertTrue(latch.await(10, TimeUnit.SECONDS));
+    long end = System.currentTimeMillis();
+
+    assertTrue(end - start >= 500);
+  }
+
   @Test
   public void multiCompleteFuture() throws InterruptedException, TimeoutException, ExecutionException {
     CompletableFuture<String> f = new CompletableFuture<>();
