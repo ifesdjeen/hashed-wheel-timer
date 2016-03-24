@@ -7,7 +7,7 @@
   <groupId>com.github.ifesdjeen</groupId>
   <artifactId>hashed-wheel-timer-parent</artifactId>
   <packaging>pom</packaging>
-  <version>1.0.0-RC1</version>
+  <version>1.0.0-RC2-SNAPSHOT</version>
   <description>Hash Wheel Timer</description>
 
   <licenses>
@@ -18,7 +18,7 @@
   </licenses>
 
   <properties>
-    <self.version>1.0.0-RC1</self.version>
+    <self.version>1.0.0-RC2-SNAPSHOT</self.version>
     <javac.target>1.8</javac.target>
     <jmh.version>1.11.3</jmh.version>
     <fusion.version>0.0.1-SNAPSHOT</fusion.version>
