@@ -25,7 +25,7 @@ public abstract class AbstractTimerTest {
   @Before
   public void before() {
     // TODO: run tests on different sequences
-    timer = new HashedWheelTimer((int) TimeUnit.NANOSECONDS.convert(10, TimeUnit.MILLISECONDS),
+    timer = new HashedWheelTimer(TimeUnit.MILLISECONDS.toNanos(10),
                                  8,
                                  waitStrategy());
   }

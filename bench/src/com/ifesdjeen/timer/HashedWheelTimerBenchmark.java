@@ -11,7 +11,7 @@ public class HashedWheelTimerBenchmark extends AbstractBenchmark {
   @Setup
   public void setup() {
     timer = new HashedWheelTimer("hashed-wheel-timer",
-                                 (int) TimeUnit.NANOSECONDS.convert(10, TimeUnit.MILLISECONDS),
+                                 TimeUnit.MILLISECONDS.toNanos(10),
                                  1024,
                                  new WaitStrategy.BusySpinWait(),
                                  Executors.newFixedThreadPool(8));
