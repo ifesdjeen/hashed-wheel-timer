@@ -195,76 +195,6 @@ public class HashedWheelTimer implements ScheduledExecutorService {
                               constantlyNull(runnable));
   }
 
-  private <V> Registration<V> scheduleOneShot(long firstDelay,
-                                              Callable<V> callable) {
-    assertRunning();
-    isTrue(firstDelay >= resolution,
-           "Cannot schedule tasks for amount of time less than timer precision.");
-    int firstFireOffset = (int) (firstDelay / resolution);
-    int firstFireRounds = firstFireOffset / wheelSize;
-
-    Registration<V> r = new OneShotRegistration<V>(firstFireRounds, callable, firstDelay);
-    // We always add +1 because we'd like to keep to the right boundary of event on execution, not to the left:
-    //
-    // For example:
-    //    |          now          |
-    // res start               next tick
-    // The earliest time we can tick is aligned to the right. Think of it a bit as a `ceil` function.
-    wheel[idx(cursor + firstFireOffset + 1)].add(r);
-    return r;
-  }
-
-  private int idx(int cursor) {
-    return cursor % wheelSize;
-  }
-
-  private <V> Registration<V> scheduleFixedRate(long recurringTimeout,
-                                                long firstDelay,
-                                                Callable<V> callable) {
-    assertRunning();
-    isTrue(recurringTimeout >= resolution,
-           "Cannot schedule tasks for amount of time less than timer precision.");
-
-    int offset = (int) (recurringTimeout / resolution);
-    int rounds = offset / wheelSize;
-
-    int firstFireOffset = (int) (firstDelay / resolution);
-    int firstFireRounds = firstFireOffset / wheelSize;
-
-    Registration<V> r = new FixedRateRegistration<>(firstFireRounds, callable, recurringTimeout, rounds, offset);
-    wheel[idx(cursor + firstFireOffset + 1)].add(r);
-    return r;
-  }
-
-  private <V> Registration<V> scheduleFixedDelay(long recurringTimeout,
-                                                 long firstDelay,
-                                                 Callable<V> callable) {
-    assertRunning();
-    isTrue(recurringTimeout >= resolution,
-           "Cannot schedule tasks for amount of time less than timer precision.");
-
-    int offset = (int) (recurringTimeout / resolution);
-    int rounds = offset / wheelSize;
-
-    int firstFireOffset = (int) (firstDelay / resolution);
-    int firstFireRounds = firstFireOffset / wheelSize;
-
-    Registration<V> r = new FixedDelayRegistration<>(firstFireRounds, callable, recurringTimeout, rounds, offset,
-                                                     this::reschedule);
-    wheel[idx(cursor + firstFireOffset + 1)].add(r);
-    return r;
-  }
-
-  /**
-   * Rechedule a {@link Registration} for the next fire
-   *
-   * @param registration
-   */
-  private void reschedule(Registration<?> registration) {
-    registration.reset();
-    wheel[idx(cursor + registration.getOffset() + 1)].add(registration);
-  }
-
   @Override
   public String toString() {
     return String.format("HashedWheelTimer { Buffer Size: %d, Resolution: %d }",
@@ -279,18 +209,6 @@ public class HashedWheelTimer implements ScheduledExecutorService {
   @Override
   public void execute(Runnable command) {
     executor.execute(command);
-  }
-
-  private void assertRunning() {
-    if (this.loop.isTerminated()) {
-      throw new IllegalStateException("Timer is not running");
-    }
-  }
-
-  private static void isTrue(boolean expression, String message) {
-    if (!expression) {
-      throw new IllegalArgumentException(message);
-    }
   }
 
   @Override
@@ -352,6 +270,15 @@ public class HashedWheelTimer implements ScheduledExecutorService {
     return this.executor.invokeAny(tasks, timeout, unit);
   }
 
+  /**
+   * Create a wrapper Function, which will "debounce" i.e. postpone the function execution until after <code>period</code>
+   * has elapsed since last time it was invoked. <code>delegate</code> will be called most once <code>period</code>.
+   *
+   * @param delegate delegate runnable to be wrapped
+   * @param period given time period
+   * @param timeUnit unit of the period
+   * @return wrapped runnable
+   */
   public Runnable debounce(Runnable delegate,
                            long period,
                            TimeUnit timeUnit) {
@@ -375,6 +302,15 @@ public class HashedWheelTimer implements ScheduledExecutorService {
     };
   }
 
+  /**
+   * Create a wrapper Consumer, which will "debounce" i.e. postpone the function execution until after <code>period</code>
+   * has elapsed since last time it was invoked. <code>delegate</code> will be called most once <code>period</code>.
+   *
+   * @param delegate delegate consumer to be wrapped
+   * @param period given time period
+   * @param timeUnit unit of the period
+   * @return wrapped runnable
+   */
   public <T> Consumer<T> debounce(Consumer<T> delegate,
                                   long period,
                                   TimeUnit timeUnit) {
@@ -398,6 +334,16 @@ public class HashedWheelTimer implements ScheduledExecutorService {
     };
   }
 
+  /**
+   * Create a wrapper Runnable, which creates a throttled version, which, when called repeatedly, will call the
+   * original function only once per every <code>period</code> milliseconds. It's easier to think about throttle
+   * in terms of it's "left bound" (first time it's called within the current period).
+   *
+   * @param delegate delegate runnable to be called
+   * @param period period to be elapsed between the runs
+   * @param timeUnit unit of the period
+   * @return wrapped runnable
+   */
   public Runnable throttle(Runnable delegate,
                            long period,
                            TimeUnit timeUnit) {
@@ -421,6 +367,16 @@ public class HashedWheelTimer implements ScheduledExecutorService {
     };
   }
 
+  /**
+   * Create a wrapper Consumer, which creates a throttled version, which, when called repeatedly, will call the
+   * original function only once per every <code>period</code> milliseconds. It's easier to think about throttle
+   * in terms of it's "left bound" (first time it's called within the current period).
+   *
+   * @param delegate delegate consumer to be called
+   * @param period period to be elapsed between the runs
+   * @param timeUnit unit of the period
+   * @return wrapped runnable
+   */
   public <T> Consumer<T> throttle(Consumer<T> delegate,
                                   long period,
                                   TimeUnit timeUnit) {
@@ -447,6 +403,90 @@ public class HashedWheelTimer implements ScheduledExecutorService {
   }
 
   // TODO: biConsumer
+
+  /**
+   * INTERNALS
+   */
+
+  private <V> Registration<V> scheduleOneShot(long firstDelay,
+                                              Callable<V> callable) {
+    assertRunning();
+    isTrue(firstDelay >= resolution,
+           "Cannot schedule tasks for amount of time less than timer precision.");
+    int firstFireOffset = (int) (firstDelay / resolution);
+    int firstFireRounds = firstFireOffset / wheelSize;
+
+    Registration<V> r = new OneShotRegistration<V>(firstFireRounds, callable, firstDelay);
+    // We always add +1 because we'd like to keep to the right boundary of event on execution, not to the left:
+    //
+    // For example:
+    //    |          now          |
+    // res start               next tick
+    // The earliest time we can tick is aligned to the right. Think of it a bit as a `ceil` function.
+    wheel[idx(cursor + firstFireOffset + 1)].add(r);
+    return r;
+  }
+
+  private <V> Registration<V> scheduleFixedRate(long recurringTimeout,
+                                                long firstDelay,
+                                                Callable<V> callable) {
+    assertRunning();
+    isTrue(recurringTimeout >= resolution,
+           "Cannot schedule tasks for amount of time less than timer precision.");
+
+    int offset = (int) (recurringTimeout / resolution);
+    int rounds = offset / wheelSize;
+
+    int firstFireOffset = (int) (firstDelay / resolution);
+    int firstFireRounds = firstFireOffset / wheelSize;
+
+    Registration<V> r = new FixedRateRegistration<>(firstFireRounds, callable, recurringTimeout, rounds, offset);
+    wheel[idx(cursor + firstFireOffset + 1)].add(r);
+    return r;
+  }
+
+  private <V> Registration<V> scheduleFixedDelay(long recurringTimeout,
+                                                 long firstDelay,
+                                                 Callable<V> callable) {
+    assertRunning();
+    isTrue(recurringTimeout >= resolution,
+           "Cannot schedule tasks for amount of time less than timer precision.");
+
+    int offset = (int) (recurringTimeout / resolution);
+    int rounds = offset / wheelSize;
+
+    int firstFireOffset = (int) (firstDelay / resolution);
+    int firstFireRounds = firstFireOffset / wheelSize;
+
+    Registration<V> r = new FixedDelayRegistration<>(firstFireRounds, callable, recurringTimeout, rounds, offset,
+                                                     this::reschedule);
+    wheel[idx(cursor + firstFireOffset + 1)].add(r);
+    return r;
+  }
+
+  /**
+   * Rechedule a {@link Registration} for the next fire
+   */
+  private void reschedule(Registration<?> registration) {
+    registration.reset();
+    wheel[idx(cursor + registration.getOffset() + 1)].add(registration);
+  }
+
+  private int idx(int cursor) {
+    return cursor % wheelSize;
+  }
+
+  private void assertRunning() {
+    if (this.loop.isTerminated()) {
+      throw new IllegalStateException("Timer is not running");
+    }
+  }
+
+  private static void isTrue(boolean expression, String message) {
+    if (!expression) {
+      throw new IllegalArgumentException(message);
+    }
+  }
 
   private static Callable<?> constantlyNull(Runnable r) {
     return () -> {
