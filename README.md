@@ -10,7 +10,8 @@ Many modern Java frameworks have their own implementations of Timing Wheels, for
 [Netty](https://github.com/netty/netty/blob/4.1/common/src/main/java/io/netty/util/HashedWheelTimer.java),
 [Agrona](https://github.com/real-logic/Agrona/blob/master/src/main/java/uk/co/real_logic/agrona/TimerWheel.java),
 [Reactor](https://github.com/reactor/reactor-core/blob/master/src/main/java/reactor/core/timer/HashWheelTimer.java),
-[Kafka](https://github.com/apache/kafka/blob/trunk/core/src/main/scala/kafka/utils/timer/Timer.scala)
+[Kafka](https://github.com/apache/kafka/blob/trunk/core/src/main/scala/kafka/utils/timer/Timer.scala),
+[Seastar](https://github.com/scylladb/seastar/blob/master/core/timer-set.hh)
 and many others. Of course, every implementation is adapted for the needs of the particular
 framework.
 
@@ -92,7 +93,7 @@ working stably for "reasonable" amounts of events (tens of thousands).
 
 The following charts show the performance of JDK `ScheduledExecutorService`
 (violet) vs `HashedWheelTimer` (black). The X is the amount of tasks submitted
-sequentially, the Y axis is the latency until all the tasks were executed.
+sequentially, the Y `Score` axis is the latency until all the tasks were executed.
 
 ![Single Timer Benchmark](https://raw.githubusercontent.com/ifesdjeen/hashed-wheel-timer/master/doc/images/single_timer.png)
 
