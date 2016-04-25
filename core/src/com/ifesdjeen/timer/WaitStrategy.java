@@ -59,9 +59,11 @@ public interface WaitStrategy {
 
     @Override
     public void waitUntil(long deadline) throws InterruptedException {
-      long sleepTimeMs = deadline - System.nanoTime();
-      if (sleepTimeMs > 0) {
-        Thread.sleep(sleepTimeMs);
+      long sleepTimeNanos = deadline - System.nanoTime();
+      if (sleepTimeNanos > 0) {
+        long sleepTimeMillis = sleepTimeNanos / 1000000;
+        int sleepTimeNano = (int) (sleepTimeNanos - (sleepTimeMillis * 1000000));
+        Thread.sleep(sleepTimeMillis, sleepTimeNano);
       }
     }
   }
