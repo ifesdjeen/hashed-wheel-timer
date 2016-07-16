@@ -3,7 +3,7 @@ package com.ifesdjeen.timer;
 public interface WaitStrategy {
 
   /**
-   * Wait until the given deadline, {@data deadlineNanoseconds}
+   * Wait until the given deadline, deadlineNanoseconds
    *
    * @param deadlineNanoseconds deadline to wait for, in milliseconds
    */
@@ -11,7 +11,7 @@ public interface WaitStrategy {
 
   /**
    * Yielding wait strategy.
-   * <p/>
+   *
    * Spins in the loop, until the deadline is reached. Releases the flow control
    * by means of Thread.yield() call. This strategy is less precise than BusySpin
    * one, but is more scheduler-friendly.
@@ -31,7 +31,7 @@ public interface WaitStrategy {
 
   /**
    * BusySpin wait strategy.
-   * <p/>
+   *
    * Spins in the loop until the deadline is reached. In a multi-core environment,
    * will occupy an entire core. Is more precise than Sleep wait strategy, but
    * consumes more resources.
@@ -50,7 +50,7 @@ public interface WaitStrategy {
 
   /**
    * Sleep wait strategy.
-   * <p/>
+   *
    * Will release the flow control, giving other threads a possibility of execution
    * on the same processor. Uses less resources than BusySpin wait, but is less
    * precise.

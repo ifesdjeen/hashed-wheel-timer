@@ -3,8 +3,8 @@ package com.ifesdjeen.timer;
 public class Exceptions {
 
     /**
-     * Used to alert consumers waiting with a {@link HashWheelWaitStrategy} for status changes.
-     * <p/>
+     * Used to alert consumers waiting with a WaitStrategy for status changes.
+     *
      * It does not fill in a stack trace for performance reasons.
      */
     @SuppressWarnings("serial")

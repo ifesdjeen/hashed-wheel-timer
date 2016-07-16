@@ -11,13 +11,13 @@ import java.util.function.Consumer;
 
 /**
  * Hash Wheel Timer, as per the paper:
- * <p/>
+ *
  * Hashed and hierarchical timing wheels:
  * http://www.cs.columbia.edu/~nahum/w6998/papers/ton97-timing-wheels.pdf
- * <p/>
+ *
  * More comprehensive slides, explaining the paper can be found here:
  * http://www.cse.wustl.edu/~cdgill/courses/cs6874/TimingWheels.ppt
- * <p/>
+ *
  * Hash Wheel timer is an approximated timer that allows performant execution of
  * larger amount of tasks with better performance compared to traditional scheduling.
  *
@@ -57,7 +57,7 @@ public class HashedWheelTimer implements ScheduledExecutorService {
   }
 
   /**
-   * Create a new {@code HashedWheelTimer} using the given timer {@data resolution} and {@data wheelSize}. All times will
+   * Create a new {@code HashedWheelTimer} using the given timer resolution and wheelSize. All times will
    * rounded up to the closest multiple of this resolution.
    *
    * @param res          resolution of this timer in NANOSECONDS
@@ -70,7 +70,7 @@ public class HashedWheelTimer implements ScheduledExecutorService {
   }
 
   /**
-   * Create a new {@code HashedWheelTimer} using the given timer {@data resolution} and {@data wheelSize}. All times will
+   * Create a new {@code HashedWheelTimer} using the given timer resolution and wheelSize. All times will
    * rounded up to the closest multiple of this resolution.
    *
    * @param name      name for daemon thread factory to be displayed
