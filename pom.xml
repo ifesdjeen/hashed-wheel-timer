@@ -10,6 +10,19 @@
   <version>1.0.0-RC1</version>
   <description>Hash Wheel Timer</description>
 
+  <url>http://github.com/ifesdjeen/hashed-wheel-timer</url>
+
+  <name>${project.groupId}:${project.artifactId}</name>
+  <developers>
+    <developer>
+      <name>Alex P</name>
+      <email>alexp@coffeenco.de</email>
+      <organization>coffeenco.de</organization>
+      <organizationUrl>http://coffeenco.de</organizationUrl>
+    </developer>
+  </developers>
+
+
   <licenses>
     <license>
       <name>Eclipse Public License</name>
@@ -21,7 +34,6 @@
     <self.version>1.0.0-RC1</self.version>
     <javac.target>1.8</javac.target>
     <jmh.version>1.11.3</jmh.version>
-    <fusion.version>0.0.1-SNAPSHOT</fusion.version>
     <guava.version>14.0.1</guava.version>
     <argLine.common>
       -server
@@ -55,6 +67,46 @@
     <outputDirectory>target/classes</outputDirectory>
 
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <version>1.5</version>
+        <executions>
+          <execution>
+            <id>sign-artifacts</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.2.1</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.9.1</version>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
