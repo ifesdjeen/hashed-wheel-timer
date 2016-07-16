@@ -120,10 +120,26 @@ fire an issue. It's always good to learn something new.
 ```xml
 <dependency>
   <groupId>com.github.ifesdjeen</groupId>
-  <artifactId>hashed-wheel-timer-parent</artifactId>
+  <artifactId>hashed-wheel-timer-core</artifactId>
   <version>1.0.0-RC1</version>
-  <type>pom</type>
 </dependency>
+```
+
+Artifact is hosted on Sonatype OSS repository:
+
+```xml
+<distributionManagement>
+    <repository>
+      <id>sonatype-releases</id>
+      <name>Sonatype Releases</name>
+      <url>https://oss.sonatype.org/content/repositories/releases</url>
+    </repository>
+    <snapshotRepository>
+      <id>sonatype-snapshots</id>
+      <name>Sonatype Snapshot</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
 ```
 
 ## License
