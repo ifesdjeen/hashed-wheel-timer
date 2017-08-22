@@ -391,8 +391,11 @@ public class HashedWheelTimer implements ScheduledExecutorService {
   private <V> Registration<V> scheduleOneShot(long firstDelay,
                                               Callable<V> callable) {
     assertRunning();
-    isTrue(firstDelay >= resolution,
-           "Cannot schedule tasks for amount of time less than timer precision.");
+    if (firstDelay < resolution) {
+      // round up to resolution
+      firstDelay = resolution;
+    }
+
     int firstFireOffset = (int) (firstDelay / resolution);
     int firstFireRounds = firstFireOffset / wheelSize;
 
