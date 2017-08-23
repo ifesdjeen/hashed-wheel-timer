@@ -81,6 +81,31 @@ public class HashedWheelTimer implements ScheduledExecutorService {
    * @param exec      Executor instance to submit tasks to
    */
   public HashedWheelTimer(String name, long res, int wheelSize, WaitStrategy strategy, ExecutorService exec) {
+    this(res, wheelSize, strategy, exec, new ThreadFactory() {
+          AtomicInteger i = new AtomicInteger();
+
+          @Override
+          public Thread newThread(Runnable r) {
+            Thread thread = new Thread(r, name + "-" + i.getAndIncrement());
+            thread.setDaemon(true);
+            return thread;
+          }
+        });
+  }
+
+  /**
+   * Create a new {@code HashedWheelTimer} using the given timer resolution and wheelSize. All times will
+   * rounded up to the closest multiple of this resolution.
+   *
+   * @param res       resolution of this timer in NANOSECONDS
+   * @param wheelSize size of the Ring Buffer supporting the Timer, the larger the wheel, the less the lookup time is
+   *                  for sparse timeouts. Sane default is 512.
+   * @param strategy  strategy for waiting for the next tick
+   * @param exec      Executor instance to submit tasks to
+   * @param factory   custom ThreadFactory for the main loop thread
+   */
+  public HashedWheelTimer(long res, int wheelSize, WaitStrategy strategy, ExecutorService exec,
+                          ThreadFactory factory) {
     this.waitStrategy = strategy;
 
     this.wheel = new Set[wheelSize];
@@ -128,16 +153,7 @@ public class HashedWheelTimer implements ScheduledExecutorService {
       }
     };
 
-    this.loop = Executors.newSingleThreadExecutor(new ThreadFactory() {
-      AtomicInteger i = new AtomicInteger();
-
-      @Override
-      public Thread newThread(Runnable r) {
-        Thread thread = new Thread(r, name + "-" + i.getAndIncrement());
-        thread.setDaemon(true);
-        return thread;
-      }
-    });
+    this.loop = Executors.newSingleThreadExecutor(factory);
     this.loop.submit(loopRunnable);
     this.executor = exec;
   }
